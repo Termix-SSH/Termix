@@ -163,12 +163,7 @@ export function requestToken(req: Request): {
     ? authHeader.split(" ")[1]
     : undefined;
   const cookie = req.cookies?.jwt as string | undefined;
-  if (
-    cookie &&
-    UNSAFE_METHODS.has(req.method) &&
-    !req.headers["x-electron-app"] &&
-    !isCookieOriginAllowed(req)
-  ) {
+  if (cookie && UNSAFE_METHODS.has(req.method) && !isCookieOriginAllowed(req)) {
     return bearer ? { token: bearer, refused: false } : { refused: true };
   }
   return { token: cookie || bearer, refused: false };
@@ -603,7 +598,9 @@ class AuthManager {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-      const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, jwtSecret, {
+        algorithms: ["HS256"],
+      }) as JWTPayload;
       if (
         payload.purpose !== undefined &&
         !(payload.purpose === "ws" && options.allowSocketTicket) &&
@@ -1110,6 +1107,31 @@ class AuthManager {
         }
       }
 
+      try {
+        const currentUser = await createCurrentUserRepository().findById(
+          payload.userId,
+        );
+        if (currentUser?.disabledAt) {
+          return clearAuthCookie(
+            req,
+            res,
+            "jwt",
+            this.getClearCookieOptions(req),
+          )
+            .status(403)
+            .json({
+              error: "This account is turned off",
+              code: "ACCOUNT_DISABLED",
+            });
+        }
+      } catch (error) {
+        databaseLogger.error("User status check failed in middleware", error, {
+          operation: "middleware_user_status_check_failed",
+          userId: payload.userId,
+        });
+        return res.status(500).json({ error: "Authentication check failed" });
+      }
+
       authReq.userId = payload.userId;
       authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
@@ -1153,7 +1175,7 @@ class AuthManager {
 
     const userRepository = createCurrentUserRepository();
     const admin = await userRepository.findById(adminUserId);
-    if (!admin?.isAdmin) {
+    if (!admin?.isAdmin || admin.disabledAt) {
       databaseLogger.warn("Impersonation attempt by non-admin", {
         operation: "admin_impersonation_denied",
         userId: adminUserId,
@@ -1285,7 +1307,7 @@ class AuthManager {
           payload.userId,
         );
 
-        if (!user?.isAdmin) {
+        if (!user?.isAdmin || user.disabledAt) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {

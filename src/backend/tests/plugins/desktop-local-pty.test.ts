@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   repairSpawnHelpers,
   resolveLocalShell,
+  sanitizeChildEnv,
 } from "../../plugins/desktop-local/local-pty.js";
 
 describe("resolveLocalShell", () => {
@@ -82,4 +83,40 @@ describe("repairSpawnHelpers", () => {
       expect(chmods[0]).toContain(`/${asar}.unpacked/node_modules/node-pty/`);
     },
   );
+});
+
+describe("sanitizeChildEnv", () => {
+  it("strips backend secrets and internal database/launcher variables while keeping shell env", () => {
+    const clean = sanitizeChildEnv({
+      PATH: "/usr/bin:/bin",
+      HOME: "/home/kei",
+      SHELL: "/bin/zsh",
+      LANG: "en_US.UTF-8",
+      UNDEFINED_VAR: undefined,
+      JWT_SECRET: "a".repeat(64),
+      JWT_SECRET_FILE: "/run/secrets/jwt",
+      DATABASE_KEY: "b".repeat(64),
+      DATABASE_KEY_PREVIOUS: "c".repeat(64),
+      DATABASE_KEY_PREVIOUS_FILE: "/run/secrets/db-prev",
+      ENCRYPTION_KEY: "d".repeat(64),
+      ENCRYPTION_KEY_FILE: "/run/secrets/enc",
+      INTERNAL_AUTH_TOKEN: "e".repeat(64),
+      OIDC_SYSTEM_SECRET: "oidc-secret",
+      WEBAUTHN_SYSTEM_SECRET: "webauthn-secret",
+      DB_FILE_KEY: "db-file-key",
+      DATABASE_URL: "postgres://user:pass@localhost/termix",
+      DATA_DIR: "/var/lib/termix",
+      TERMIX_PLUGIN_LAUNCHER: "1",
+      // Case-insensitive match for Windows environments.
+      jwt_secret: "f".repeat(64),
+      Database_Url: "sqlite:///tmp/test.db",
+    });
+
+    expect(clean).toEqual({
+      PATH: "/usr/bin:/bin",
+      HOME: "/home/kei",
+      SHELL: "/bin/zsh",
+      LANG: "en_US.UTF-8",
+    });
+  });
 });

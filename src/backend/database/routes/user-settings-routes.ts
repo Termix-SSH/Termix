@@ -5,6 +5,7 @@ import {
   getGlobalLogLevel,
   setGlobalLogLevel,
 } from "../../utils/logger.js";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
@@ -23,7 +24,7 @@ async function getAdminActor(
 ): Promise<UserRecord | null> {
   if (!userId) return null;
   const user = await createCurrentUserRepository().findById(userId);
-  return user?.isAdmin ? user : null;
+  return isActiveAdmin(user) ? user : null;
 }
 
 export function registerUserSettingsRoutes(

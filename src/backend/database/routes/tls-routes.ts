@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentUserRepository } from "../repositories/factory.js";
@@ -17,7 +18,7 @@ async function getAdminActor(
 ): Promise<UserRecord | null> {
   if (!userId) return null;
   const user = await createCurrentUserRepository().findById(userId);
-  return user?.isAdmin ? user : null;
+  return isActiveAdmin(user) ? user : null;
 }
 
 export function registerTlsRoutes(

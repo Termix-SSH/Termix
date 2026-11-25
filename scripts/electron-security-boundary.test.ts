@@ -69,6 +69,13 @@ it("rejects setting keys that coerce to the protected editor key", async () => {
   const { vi } = await import("vitest");
   const writeFileSync = vi.fn();
   let handler: (event: unknown, key: unknown, value: unknown) => unknown;
+  const { createRequire } = await import("node:module");
+  const { ALLOWED_SETTING_KEYS } = createRequire(import.meta.url)(
+    "../electron/ipc-guard.cjs",
+  );
+  const { IPC_ARGS } = createRequire(import.meta.url)(
+    "../electron/ipc-args.cjs",
+  );
   runInNewContext(
     main.slice(
       main.indexOf('ipc.handle("set-setting"'),
@@ -80,6 +87,7 @@ it("rejects setting keys that coerce to the protected editor key", async () => {
           handler = callback;
         },
       },
+      ALLOWED_SETTING_KEYS,
       EXTERNAL_EDITOR_SETTING: "fileManager.externalEditorPath",
       dialogChosenPaths: new Set(["/chosen/editor"]),
       app: { getPath: () => "/settings" },
@@ -89,10 +97,6 @@ it("rejects setting keys that coerce to the protected editor key", async () => {
     },
   );
   // The IPC guard checks the key before the handler ever runs.
-  const { createRequire } = await import("node:module");
-  const { IPC_ARGS } = createRequire(import.meta.url)(
-    "../electron/ipc-args.cjs",
-  );
   for (const key of [["fileManager.externalEditorPath"], null, {}, 42]) {
     expect(() => IPC_ARGS["set-setting"](key, "/unapproved/editor")).toThrow();
   }

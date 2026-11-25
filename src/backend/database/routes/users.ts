@@ -30,7 +30,10 @@ import {
   isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
 } from "./desktop-auto-session.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
+import {
+  PermissionManager,
+  isActiveAdmin,
+} from "../../utils/permission-manager.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -145,7 +148,7 @@ async function findCurrentUser(userId: string): Promise<UserRecord | null> {
 
 async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
   const user = await findCurrentUser(userId);
-  return user?.isAdmin ? user : null;
+  return isActiveAdmin(user) ? user : null;
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -1633,7 +1636,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     const { successorUserId: requestedSuccessor } = req.body ?? {};
     // Someone with a delegated role must not inherit, and so decrypt, the
     // account's hosts and credentials.
-    const actorIsAdmin = adminUser.isAdmin;
+    const actorIsAdmin = isActiveAdmin(adminUser);
     if (!actorIsAdmin && requestedSuccessor === undefined) {
       return res.status(400).json({
         error: "Choose who gets this user's hosts and credentials",

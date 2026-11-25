@@ -60,7 +60,11 @@ import {
 } from "@/plugin-host/frames/frame-state";
 import { FRAME_CHANNEL } from "@/plugin-frame/protocol";
 
-const summary = (id: string, uses: string[] = []): PluginSummary =>
+const summary = (
+  id: string,
+  uses: string[] = [],
+  capabilities: string[] = [],
+): PluginSummary =>
   ({
     id,
     name: id,
@@ -70,6 +74,7 @@ const summary = (id: string, uses: string[] = []): PluginSummary =>
     frontend: true,
     frontendIsolation: "frame",
     contributes: { uses },
+    capabilities,
   }) as unknown as PluginSummary;
 
 let iframe: HTMLIFrameElement;
@@ -321,6 +326,9 @@ describe("other plugins' views", () => {
 describe("things that need the person's click", () => {
   const open = vi.fn();
   beforeEach(() => {
+    setPluginSummaries([
+      summary("docker", ["terminal.resolveTheme"], ["auth:policy"]),
+    ]);
     open.mockReset();
     vi.spyOn(window, "open").mockImplementation(open);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -369,6 +377,48 @@ describe("things that need the person's click", () => {
     ]);
     expect(revoke).toMatchObject({ ok: true, value: { status: 200 } });
     expect(mocks.request).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses sensitive core requests when the plugin lacks the required capability", async () => {
+    setPluginSummaries([
+      summary("no-caps", [], []),
+      summary(
+        "with-caps",
+        [],
+        ["hosts:read", "credentials:read", "users:read"],
+      ),
+    ]);
+    connectFrame(iframe, "no-caps", "view", "tab:no-caps", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:no-caps" });
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+
+    for (const [method, path] of [
+      ["GET", "/host/db/host"],
+      ["GET", "/credentials"],
+      ["GET", "/users/sessions"],
+      ["GET", "/users/api-keys/mine"],
+      ["POST", "/users/api-keys/mine/revoke-all"],
+    ]) {
+      const res = await call("http", [{ method, path }]);
+      expect(res, `${method} ${path}`).toMatchObject({
+        ok: true,
+        value: { status: 403 },
+      });
+    }
+    expect(mocks.request).not.toHaveBeenCalled();
+
+    resetFrameConnections();
+    connectFrame(iframe, "with-caps", "view", "tab:with-caps", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:with-caps" });
+    expect(
+      await call("http", [{ method: "GET", path: "/host/db/host" }]),
+    ).toMatchObject({ ok: true, value: { status: 200 } });
+    expect(
+      await call("http", [{ method: "GET", path: "/credentials" }]),
+    ).toMatchObject({ ok: true, value: { status: 200 } });
+    expect(
+      await call("http", [{ method: "GET", path: "/users/sessions" }]),
+    ).toMatchObject({ ok: true, value: { status: 200 } });
   });
 });
 

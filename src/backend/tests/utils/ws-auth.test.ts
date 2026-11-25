@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { IncomingMessage } from "http";
 import {
   extractWebSocketToken,
@@ -8,6 +8,11 @@ import {
 function request(headers: Record<string, string>): IncomingMessage {
   return { headers } as IncomingMessage;
 }
+
+afterEach(() => {
+  delete process.env.TERMIX_ALLOWED_ORIGINS;
+  delete process.env.CORS_ALLOWED_ORIGINS;
+});
 
 describe("extractWebSocketToken", () => {
   it("reads JWTs from the WebSocket subprotocol without using the URL", () => {
@@ -76,7 +81,41 @@ describe("the jwt cookie on a socket", () => {
     ).toBe(true);
   });
 
-  it("allows the desktop app, which is not a web origin", () => {
+  it("allows the desktop app origin (app://termix)", () => {
+    expect(
+      isCookieOriginAllowed(
+        request({ host: "termix.example.com", origin: "app://termix" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects file:// and other unlisted non-web schemes by default", () => {
+    for (const origin of [
+      "file://",
+      "file:///tmp/evil.html",
+      "app://evil",
+      "app://termix.evil",
+      "chrome-extension://abcdefghijklmnop",
+    ]) {
+      expect(
+        isCookieOriginAllowed(request({ host: "termix.example.com", origin })),
+        origin,
+      ).toBe(false);
+    }
+
+    expect(
+      extractWebSocketToken(
+        request({
+          cookie: "jwt=cookie-token",
+          host: "termix.example.com",
+          origin: "file://",
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("allows an explicitly allowlisted non-web origin", () => {
+    process.env.CORS_ALLOWED_ORIGINS = "file://";
     expect(
       isCookieOriginAllowed(
         request({ host: "termix.example.com", origin: "file://" }),

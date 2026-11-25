@@ -71,6 +71,48 @@ describe("first start", () => {
     expect(await crypto.getInternalAuthToken()).toBe(internal);
   });
 
+  it("does not leak generated, loaded, or rotated secrets back into process.env", async () => {
+    const jwt = await crypto.getJWTSecret();
+    const db = await crypto.getDatabaseKey();
+    const enc = await crypto.getEncryptionKey();
+    const internal = await crypto.getInternalAuthToken();
+
+    for (const name of [
+      "JWT_SECRET",
+      "DATABASE_KEY",
+      "ENCRYPTION_KEY",
+      "INTERNAL_AUTH_TOKEN",
+    ]) {
+      expect(process.env[name]).toBeUndefined();
+      expect(crypto.getSecretSource(name)).toBe("generated");
+      expect(await crypto.isExternalSecret(name)).toBe(false);
+    }
+
+    crypto.resetForTests();
+    expect(await crypto.getJWTSecret()).toBe(jwt);
+    expect((await crypto.getDatabaseKey()).equals(db)).toBe(true);
+    expect((await crypto.getEncryptionKey()).equals(enc)).toBe(true);
+    expect(await crypto.getInternalAuthToken()).toBe(internal);
+
+    for (const name of [
+      "JWT_SECRET",
+      "DATABASE_KEY",
+      "ENCRYPTION_KEY",
+      "INTERNAL_AUTH_TOKEN",
+    ]) {
+      expect(process.env[name]).toBeUndefined();
+      expect(crypto.getSecretSource(name)).toBe("dotenv");
+      expect(await crypto.isExternalSecret(name)).toBe(false);
+    }
+
+    await crypto.rotateJWTSecret();
+    await crypto.rotateEncryptionKey();
+    await crypto.forgetPreviousEncryptionKeys();
+    expect(process.env.JWT_SECRET).toBeUndefined();
+    expect(process.env.ENCRYPTION_KEY).toBeUndefined();
+    expect(process.env.ENCRYPTION_KEY_PREVIOUS).toBeUndefined();
+  });
+
   it("replaces a too short secret in .env", async () => {
     fs.writeFileSync(path.join(dir, ".env"), "JWT_SECRET=short\n");
     const jwt = await crypto.getJWTSecret();
@@ -94,6 +136,8 @@ describe("secrets from outside", () => {
     expect(fs.existsSync(path.join(dir, ".env"))).toBe(false);
     expect(await crypto.isExternalSecret("ENCRYPTION_KEY")).toBe(true);
     expect(await crypto.isExternalSecret("JWT_SECRET")).toBe(true);
+    expect(crypto.getSecretSource("JWT_SECRET")).toBe("env");
+    expect(crypto.getSecretSource("ENCRYPTION_KEY")).toBe("file");
   });
 
   it("refuses short secret files and keys that are not 64 hex characters", async () => {

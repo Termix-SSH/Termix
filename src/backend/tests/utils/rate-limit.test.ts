@@ -5,7 +5,9 @@ import request from "supertest";
 import {
   apiKeyFailureWait,
   CORE_RATE_LIMITS,
+  getRateLimitBucketCount,
   hit,
+  MAX_RATE_LIMIT_BUCKETS,
   rateLimitMiddleware,
   recordApiKeyFailure,
   resetRateLimits,
@@ -119,5 +121,17 @@ describe("rate limits", () => {
     recordApiKeyFailure("10.9.9.9");
     expect(apiKeyFailureWait("10.9.9.9")).toBeGreaterThan(0);
     expect(apiKeyFailureWait("10.9.9.8")).toBe(0);
+  });
+
+  it("caps bucket count by evicting expired and oldest entries", () => {
+    const limit = { max: 5, windowMs: 60_000 };
+    for (let i = 0; i < MAX_RATE_LIMIT_BUCKETS + 25; i++) {
+      hit(`flood:${i}`, limit, 1_000);
+    }
+    expect(getRateLimitBucketCount()).toBe(MAX_RATE_LIMIT_BUCKETS);
+
+    // Expired entries are swept first before evicting active keys.
+    hit("after-expiry", limit, 100_000);
+    expect(getRateLimitBucketCount()).toBe(1);
   });
 });

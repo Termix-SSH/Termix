@@ -23,6 +23,7 @@ import {
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   createCurrentRoleRepository,
@@ -305,7 +306,7 @@ export function registerUserAdminRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(userId);
-      if (!adminUser?.isAdmin) {
+      if (!isActiveAdmin(adminUser)) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -392,7 +393,7 @@ export function registerUserAdminRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(userId);
-      if (!adminUser?.isAdmin) {
+      if (!isActiveAdmin(adminUser)) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -914,7 +915,7 @@ export function registerUserAdminRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
+      if (!isActiveAdmin(adminUser)) {
         return res.status(403).json({ error: "Admin access required" });
       }
 

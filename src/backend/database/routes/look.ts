@@ -2,6 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
@@ -163,7 +164,7 @@ router.put(
     const userId = (req as AuthenticatedRequest).userId;
     try {
       const actor = await createCurrentUserRepository().findById(userId);
-      if (!actor?.isAdmin) {
+      if (!isActiveAdmin(actor)) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const body = (req.body ?? {}) as { layout?: unknown; theme?: unknown };

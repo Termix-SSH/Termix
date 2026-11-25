@@ -70,6 +70,15 @@ describe("security headers", () => {
     expect(plain.headers["content-security-policy"]).toBe(PLUGIN_CSP);
     expect(plain.headers["x-frame-options"]).toBeUndefined();
     expect(plain.headers["content-security-policy"]).toContain(
+      "default-src 'self'",
+    );
+    expect(plain.headers["content-security-policy"]).toContain(
+      "object-src 'none'",
+    );
+    expect(plain.headers["content-security-policy"]).toContain(
+      "base-uri 'none'",
+    );
+    expect(plain.headers["content-security-policy"]).toContain(
       "frame-ancestors 'self'",
     );
 

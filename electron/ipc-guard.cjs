@@ -77,6 +77,12 @@ function createIpcGuard({
 // Validators. Each returns the cleaned value or throws.
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const ALLOWED_SETTING_KEYS = new Set([
+  "rightClickCopyPaste",
+  "copyOnSelect",
+  "fileManager.externalEditorPath",
+  "theme",
+]);
 
 function string(value, { max, min = 0, pattern, name = "value" } = {}) {
   if (typeof value !== "string") refuse(`${name} must be text`);
@@ -95,7 +101,9 @@ function optionalString(value, options) {
 
 function settingKey(key) {
   string(key, { min: 1, max: 128, pattern: /^[A-Za-z0-9._:-]+$/, name: "key" });
-  if (FORBIDDEN_KEYS.has(key)) refuse("key is not allowed");
+  if (FORBIDDEN_KEYS.has(key) || !ALLOWED_SETTING_KEYS.has(key)) {
+    refuse("key is not allowed");
+  }
   return key;
 }
 
@@ -311,6 +319,7 @@ function clipboardText(value) {
 }
 
 module.exports = {
+  ALLOWED_SETTING_KEYS,
   IpcRefused,
   createIpcGuard,
   validators: {

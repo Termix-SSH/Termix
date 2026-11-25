@@ -22,6 +22,7 @@ import {
   logAudit,
 } from "../utils/audit-logger.js";
 import { isEmbeddedBackend } from "../utils/embedded-host.js";
+import { isActiveAdmin } from "../utils/permission-manager.js";
 import { authLogger } from "../utils/logger.js";
 
 export const ADMIN_HOLD_MINUTES_KEY = "admin_hold_minutes";
@@ -89,7 +90,7 @@ export interface HoldSettings {
 
 async function adminCount(): Promise<number> {
   const users = await createCurrentUserRepository().listAll();
-  return users.filter((user) => user.isAdmin).length;
+  return users.filter((user) => isActiveAdmin(user)).length;
 }
 
 export async function getHoldSettings(): Promise<HoldSettings> {
@@ -191,7 +192,7 @@ async function alertOtherAdmins(
     const { sendCoreAlert } = await import("../notify/core-notify.js");
     const users = await createCurrentUserRepository().listAll();
     for (const user of users) {
-      if (!user.isAdmin || user.id === exceptUserId) continue;
+      if (!isActiveAdmin(user) || user.id === exceptUserId) continue;
       await sendCoreAlert({
         ...alert,
         severity: "critical",
@@ -309,7 +310,7 @@ export async function runDueHolds(now = new Date()): Promise<number> {
       : null;
     // The wait is for the other admins: a requester who lost admin since
     // doesn't get the change.
-    if (!requester?.isAdmin) {
+    if (!isActiveAdmin(requester)) {
       await fail("The admin who asked is no longer an admin");
       continue;
     }

@@ -37,7 +37,7 @@ const { isLocalBackendUrl } = require("./local-backend.cjs");
 const LAUNCH_SECRET = crypto.randomBytes(32).toString("hex");
 const { URL } = require("url");
 const appProtocol = require("./app-protocol.cjs");
-const { createIpcGuard } = require("./ipc-guard.cjs");
+const { ALLOWED_SETTING_KEYS, createIpcGuard } = require("./ipc-guard.cjs");
 const { IPC_ARGS } = require("./ipc-args.cjs");
 const {
   REVOCATIONS_URL,
@@ -2001,7 +2001,8 @@ function readSetting(key) {
   return settings[key] !== undefined ? settings[key] : null;
 }
 
-ipc.handle("get-setting", (event, key) => {
+ipc.handle("get-setting", (_event, key) => {
+  if (!ALLOWED_SETTING_KEYS.has(key)) return null;
   try {
     return readSetting(key);
   } catch (error) {
@@ -2011,6 +2012,9 @@ ipc.handle("get-setting", (event, key) => {
 });
 
 ipc.handle("set-setting", (_event, key, value) => {
+  if (!ALLOWED_SETTING_KEYS.has(key)) {
+    return { success: false, error: "Setting key is not allowed" };
+  }
   if (
     key === EXTERNAL_EDITOR_SETTING &&
     value &&

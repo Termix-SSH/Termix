@@ -23,21 +23,27 @@ export class ExternalSecretError extends Error {
   }
 }
 
+/** Where a loaded secret came from. */
+export type SecretSource = "env" | "file" | "dotenv" | "generated";
+
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
   private databaseKey: Buffer | null = null;
   private encryptionKey: Buffer | null = null;
   private internalAuthToken: string | null = null;
+  private secretSources = new Map<string, SecretSource>();
 
   private constructor() {}
 
   private async readExternalSecret(
     name: string,
     minimumLength: number,
-  ): Promise<string | null> {
+  ): Promise<{ value: string; source: "env" | "file" } | null> {
     const direct = process.env[name]?.trim();
-    if (direct && direct.length >= minimumLength) return direct;
+    if (direct && direct.length >= minimumLength) {
+      return { value: direct, source: "env" };
+    }
 
     const secretFile = process.env[`${name}_FILE`]?.trim();
     if (!secretFile) return null;
@@ -45,7 +51,7 @@ class SystemCrypto {
     if (value.length < minimumLength) {
       throw new Error(`${name}_FILE contains a secret that is too short`);
     }
-    return value;
+    return { value, source: "file" };
   }
 
   private requireExternalSecret(name: string): never {
@@ -72,7 +78,8 @@ class SystemCrypto {
     try {
       const envSecret = await this.readExternalSecret("JWT_SECRET", 64);
       if (envSecret) {
-        this.jwtSecret = envSecret;
+        this.jwtSecret = envSecret.value;
+        this.secretSources.set("JWT_SECRET", envSecret.source);
         return;
       }
 
@@ -84,7 +91,7 @@ class SystemCrypto {
         const jwtMatch = envContent.match(/^JWT_SECRET=(.+)$/m);
         if (jwtMatch && jwtMatch[1] && jwtMatch[1].length >= 64) {
           this.jwtSecret = jwtMatch[1];
-          process.env.JWT_SECRET = jwtMatch[1];
+          this.secretSources.set("JWT_SECRET", "dotenv");
           databaseLogger.success("JWT secret loaded from .env file", {
             operation: "jwt_init_from_file_success",
             secretLength: jwtMatch[1].length,
@@ -130,7 +137,11 @@ class SystemCrypto {
 
       const envKey = await this.readExternalSecret("DATABASE_KEY", 64);
       if (envKey) {
-        this.databaseKey = this.parseExternalHexKey("DATABASE_KEY", envKey);
+        this.databaseKey = this.parseExternalHexKey(
+          "DATABASE_KEY",
+          envKey.value,
+        );
+        this.secretSources.set("DATABASE_KEY", envKey.source);
         return;
       }
 
@@ -139,7 +150,7 @@ class SystemCrypto {
         const dbKeyMatch = envContent.match(/^DATABASE_KEY=(.+)$/m);
         if (dbKeyMatch && dbKeyMatch[1] && dbKeyMatch[1].length >= 64) {
           this.databaseKey = Buffer.from(dbKeyMatch[1], "hex");
-          process.env.DATABASE_KEY = dbKeyMatch[1];
+          this.secretSources.set("DATABASE_KEY", "dotenv");
           return;
         } else {
           // expected - key not found or invalid length in env file
@@ -175,7 +186,11 @@ class SystemCrypto {
 
       const envKey = await this.readExternalSecret("ENCRYPTION_KEY", 64);
       if (envKey) {
-        this.encryptionKey = this.parseExternalHexKey("ENCRYPTION_KEY", envKey);
+        this.encryptionKey = this.parseExternalHexKey(
+          "ENCRYPTION_KEY",
+          envKey.value,
+        );
+        this.secretSources.set("ENCRYPTION_KEY", envKey.source);
         return;
       }
 
@@ -184,7 +199,7 @@ class SystemCrypto {
         const keyMatch = envContent.match(/^ENCRYPTION_KEY=(.+)$/m);
         if (keyMatch && keyMatch[1] && keyMatch[1].length >= 64) {
           this.encryptionKey = Buffer.from(keyMatch[1], "hex");
-          process.env.ENCRYPTION_KEY = keyMatch[1];
+          this.secretSources.set("ENCRYPTION_KEY", "dotenv");
           return;
         }
       } catch {
@@ -210,6 +225,7 @@ class SystemCrypto {
       const previous = await this.getPreviousKeys("ENCRYPTION_KEY");
       if (previous.some((key) => key.equals(this.encryptionKey!))) {
         this.encryptionKey = null;
+        this.secretSources.delete("ENCRYPTION_KEY");
         throw new Error(
           "ENCRYPTION_KEY is one of the keys in ENCRYPTION_KEY_PREVIOUS. An environment variable may still hold the old key after a rotation: set it to the new key or remove it",
         );
@@ -222,7 +238,8 @@ class SystemCrypto {
     try {
       const envToken = await this.readExternalSecret("INTERNAL_AUTH_TOKEN", 32);
       if (envToken) {
-        this.internalAuthToken = envToken;
+        this.internalAuthToken = envToken.value;
+        this.secretSources.set("INTERNAL_AUTH_TOKEN", envToken.source);
         return;
       }
 
@@ -234,7 +251,7 @@ class SystemCrypto {
         const tokenMatch = envContent.match(/^INTERNAL_AUTH_TOKEN=(.+)$/m);
         if (tokenMatch && tokenMatch[1] && tokenMatch[1].length >= 32) {
           this.internalAuthToken = tokenMatch[1];
-          process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
+          this.secretSources.set("INTERNAL_AUTH_TOKEN", "dotenv");
           return;
         }
       } catch {
@@ -266,9 +283,9 @@ class SystemCrypto {
     const newSecret = crypto.randomBytes(32).toString("hex");
     const instanceId = crypto.randomBytes(8).toString("hex");
 
-    this.jwtSecret = newSecret;
-
     await this.updateEnvFile("JWT_SECRET", newSecret);
+    this.jwtSecret = newSecret;
+    this.secretSources.set("JWT_SECRET", "generated");
 
     databaseLogger.success("JWT secret auto-generated and saved to .env", {
       operation: "jwt_auto_generated",
@@ -283,9 +300,9 @@ class SystemCrypto {
     const newKeyHex = newKey.toString("hex");
     const instanceId = crypto.randomBytes(8).toString("hex");
 
-    this.databaseKey = newKey;
-
     await this.updateEnvFile("DATABASE_KEY", newKeyHex);
+    this.databaseKey = newKey;
+    this.secretSources.set("DATABASE_KEY", "generated");
 
     databaseLogger.success("Database key auto-generated and saved to .env", {
       operation: "db_key_auto_generated",
@@ -300,9 +317,9 @@ class SystemCrypto {
     const newKeyHex = newKey.toString("hex");
     const instanceId = crypto.randomBytes(8).toString("hex");
 
-    this.encryptionKey = newKey;
-
     await this.updateEnvFile("ENCRYPTION_KEY", newKeyHex);
+    this.encryptionKey = newKey;
+    this.secretSources.set("ENCRYPTION_KEY", "generated");
 
     databaseLogger.success("Encryption key auto-generated and saved to .env", {
       operation: "encryption_key_auto_generated",
@@ -316,9 +333,9 @@ class SystemCrypto {
     const newToken = crypto.randomBytes(32).toString("hex");
     const instanceId = crypto.randomBytes(8).toString("hex");
 
-    this.internalAuthToken = newToken;
-
     await this.updateEnvFile("INTERNAL_AUTH_TOKEN", newToken);
+    this.internalAuthToken = newToken;
+    this.secretSources.set("INTERNAL_AUTH_TOKEN", "generated");
 
     databaseLogger.success(
       "Internal auth token auto-generated and saved to .env",
@@ -355,10 +372,12 @@ class SystemCrypto {
   async getSystemKeyStatus() {
     const isValid = await this.validateJWTSecret();
     const hasSecret = this.jwtSecret !== null;
+    const source = this.secretSources.get("JWT_SECRET");
 
-    const hasEnvVar = !!(
-      process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64
-    );
+    const hasEnvVar =
+      source === "env" ||
+      source === "file" ||
+      !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64);
 
     return {
       hasSecret,
@@ -371,16 +390,24 @@ class SystemCrypto {
     };
   }
 
+  /** Where a loaded secret came from, if it has been initialized. */
+  getSecretSource(name: string): SecretSource | undefined {
+    return this.secretSources.get(name);
+  }
+
   /** Whether name comes from the environment or a _FILE secret, not .env. */
   async isExternalSecret(name: string): Promise<boolean> {
     if (process.env[`${name}_FILE`]?.trim()) return true;
     const direct = process.env[name]?.trim();
-    if (!direct) return false;
-    // The starter loads .env into process.env, but never over a real variable.
-    const line = (await this.readDotEnv()).match(
-      new RegExp(`^${name}=(.+)$`, "m"),
-    );
-    return !line || line[1].trim() !== direct;
+    if (direct) {
+      // The starter loads .env into process.env, but never over a real variable.
+      const line = (await this.readDotEnv()).match(
+        new RegExp(`^${name}=(.+)$`, "m"),
+      );
+      return !line || line[1].trim() !== direct;
+    }
+    const source = this.secretSources.get(name);
+    return source === "env" || source === "file";
   }
 
   /**
@@ -428,6 +455,7 @@ class SystemCrypto {
     const next = crypto.randomBytes(32).toString("hex");
     await this.updateEnvFile("JWT_SECRET", next);
     this.jwtSecret = next;
+    this.secretSources.set("JWT_SECRET", "dotenv");
   }
 
   /**
@@ -450,6 +478,7 @@ class SystemCrypto {
     );
     await this.updateEnvFile("ENCRYPTION_KEY", next.toString("hex"));
     this.encryptionKey = next;
+    this.secretSources.set("ENCRYPTION_KEY", "dotenv");
     return next;
   }
 
@@ -466,6 +495,7 @@ class SystemCrypto {
     this.databaseKey = null;
     this.encryptionKey = null;
     this.internalAuthToken = null;
+    this.secretSources.clear();
   }
 
   private async updateEnvFile(key: string, value: string): Promise<void> {
@@ -496,8 +526,6 @@ class SystemCrypto {
 
       await fs.writeFile(envPath, envContent, { mode: 0o600 });
       await restrictToOwner(envPath);
-
-      process.env[key] = value;
     } catch (error) {
       databaseLogger.error(`Failed to update .env file with ${key}`, error, {
         operation: "env_file_update_failed",

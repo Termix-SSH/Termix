@@ -33,7 +33,21 @@ interface Bucket {
   resetAt: number;
 }
 
+export const MAX_RATE_LIMIT_BUCKETS = 10_000;
+
 const buckets = new Map<string, Bucket>();
+
+function evictBucketsIfFull(now: number): void {
+  if (buckets.size < MAX_RATE_LIMIT_BUCKETS) return;
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) buckets.delete(key);
+  }
+  while (buckets.size >= MAX_RATE_LIMIT_BUCKETS) {
+    const oldestKey = buckets.keys().next().value;
+    if (oldestKey === undefined) break;
+    buckets.delete(oldestKey);
+  }
+}
 
 const sweep = setInterval(
   () => {
@@ -50,12 +64,21 @@ sweep.unref?.();
 export function hit(key: string, limit: RateLimit, now = Date.now()): number {
   let bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
+    if (bucket) {
+      buckets.delete(key);
+    } else {
+      evictBucketsIfFull(now);
+    }
     bucket = { count: 0, resetAt: now + limit.windowMs };
     buckets.set(key, bucket);
   }
   bucket.count += 1;
   if (bucket.count <= limit.max) return 0;
   return Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+}
+
+export function getRateLimitBucketCount(): number {
+  return buckets.size;
 }
 
 export function resetRateLimits(): void {

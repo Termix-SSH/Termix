@@ -82,13 +82,19 @@ export function frameRoute(
   pluginId: string,
   method: string,
   url: string,
+  capabilities?: readonly string[],
 ): { kind: "own" | "core" | "refused"; path: string } {
   const { path, query } = pathOf(url);
   const own = new RegExp(
     `^/plugin-(api|assets|ws)/${pluginId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/|$)`,
   );
   if (own.test(path)) return { kind: "own", path };
-  const check = checkCoreRequest(pluginId, method, `${path}${query}`);
+  const check = checkCoreRequest(
+    pluginId,
+    method,
+    `${path}${query}`,
+    capabilities,
+  );
   return { kind: check.ok ? "core" : "refused", path };
 }
 
@@ -124,7 +130,10 @@ export async function renderFrameViews(
     const method = String(
       init?.method ?? (input instanceof Request ? input.method : "GET"),
     ).toUpperCase();
-    const route = frameRoute(pluginId, method, url);
+    const capabilities = Array.isArray(options.manifest.capabilities)
+      ? options.manifest.capabilities.map(String)
+      : undefined;
+    const route = frameRoute(pluginId, method, url, capabilities);
     if (route.kind === "refused") {
       refused.add(`${method} ${route.path}`);
       return json(403, { error: "Not available to plugin views" });
