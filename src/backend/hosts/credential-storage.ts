@@ -97,6 +97,33 @@ export function assertSecretsAllowed(
   }
 }
 
+function stripNodePasswords(value: unknown): unknown {
+  const clean = (nodes: unknown[]) =>
+    nodes.map((node) => {
+      if (
+        node &&
+        typeof node === "object" &&
+        !Array.isArray(node) &&
+        filled((node as Record<string, unknown>).password)
+      ) {
+        const { password: _pw, ...rest } = node as Record<string, unknown>;
+        return rest;
+      }
+      return node;
+    });
+
+  if (Array.isArray(value)) return clean(value);
+  if (typeof value === "string" && value) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return JSON.stringify(clean(parsed));
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 /** Drops secrets from a synced row instead of refusing it. */
 export function stripSecrets(
   table: Exclude<SecretTable, "protocol_auth">,
@@ -107,6 +134,13 @@ export function stripSecrets(
   const fields = table === "ssh_data" ? HOST_SECRETS : CREDENTIAL_SECRETS;
   for (const field of fields) {
     if (filled(out[field])) out[field] = null;
+  }
+  if (table === "ssh_data") {
+    for (const field of ["socks5ProxyChain", "jumpHosts"]) {
+      if (out[field] !== undefined && out[field] !== null) {
+        out[field] = stripNodePasswords(out[field]);
+      }
+    }
   }
   return out;
 }

@@ -25,7 +25,7 @@ import {
 } from "../../utils/data-dir-guard.js";
 import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
 import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
-import { connectRemoteDatabase } from "./connect.js";
+import { closeRemoteDatabase, connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
 import { assertNotPre29Database } from "./upgrade-guard.js";
 import { isEmbeddedBackend } from "../../utils/embedded-host.js";
@@ -895,29 +895,35 @@ const relaxPluginGrantGrantedBy = () => {
       return;
     }
 
-    sqlite.exec(`
-      PRAGMA foreign_keys=OFF;
-      BEGIN;
-      CREATE TABLE plugin_permission_grants_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          plugin_id TEXT NOT NULL,
-          capability TEXT NOT NULL,
-          granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          granted_by TEXT,
-          source TEXT NOT NULL DEFAULT 'admin',
-          UNIQUE (plugin_id, capability),
-          FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
-          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
-      );
-      INSERT INTO plugin_permission_grants_new
-          (id, plugin_id, capability, granted_at, granted_by, source)
-          SELECT id, plugin_id, capability, granted_at, granted_by, 'admin'
-          FROM plugin_permission_grants;
-      DROP TABLE plugin_permission_grants;
-      ALTER TABLE plugin_permission_grants_new RENAME TO plugin_permission_grants;
-      COMMIT;
-      PRAGMA foreign_keys=ON;
-    `);
+    sqlite.exec("PRAGMA foreign_keys = OFF");
+    try {
+      sqlite.exec(`
+        BEGIN;
+        CREATE TABLE plugin_permission_grants_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plugin_id TEXT NOT NULL,
+            capability TEXT NOT NULL,
+            granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            granted_by TEXT,
+            source TEXT NOT NULL DEFAULT 'admin',
+            UNIQUE (plugin_id, capability),
+            FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
+            FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+        );
+        INSERT INTO plugin_permission_grants_new
+            (id, plugin_id, capability, granted_at, granted_by, source)
+            SELECT id, plugin_id, capability, granted_at, granted_by, 'admin'
+            FROM plugin_permission_grants;
+        DROP TABLE plugin_permission_grants;
+        ALTER TABLE plugin_permission_grants_new RENAME TO plugin_permission_grants;
+        COMMIT;
+      `);
+    } catch (rebuildError) {
+      if (sqlite.inTransaction) sqlite.exec("ROLLBACK");
+      throw rebuildError;
+    } finally {
+      sqlite.exec("PRAGMA foreign_keys = ON");
+    }
 
     databaseLogger.info(
       "Relaxed plugin_permission_grants.granted_by to allow bundled grants",
@@ -1314,20 +1320,28 @@ const migrateSchema = () => {
         .pluck()
         .all() as string[];
 
-      sqlite.exec(`PRAGMA foreign_keys = OFF`);
-      sqlite.exec(`
-        ${tempCreateSql};
+      sqlite.exec("PRAGMA foreign_keys = OFF");
+      try {
+        sqlite.exec(`
+          BEGIN;
+          ${tempCreateSql};
 
-        INSERT INTO ${tempTableName} (${allColumns}) SELECT ${allColumns} FROM ssh_credentials;
+          INSERT INTO ${tempTableName} (${allColumns}) SELECT ${allColumns} FROM ssh_credentials;
 
-        DROP TABLE ssh_credentials;
+          DROP TABLE ssh_credentials;
 
-        ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
-      `);
-      for (const indexSql of indexDefs) {
-        sqlite.exec(indexSql);
+          ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
+        `);
+        for (const indexSql of indexDefs) {
+          sqlite.exec(indexSql);
+        }
+        sqlite.exec("COMMIT");
+      } catch (rebuildError) {
+        if (sqlite.inTransaction) sqlite.exec("ROLLBACK");
+        throw rebuildError;
+      } finally {
+        sqlite.exec("PRAGMA foreign_keys = ON");
       }
-      sqlite.exec(`PRAGMA foreign_keys = ON`);
 
       databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
         operation: "schema_migration_username_nullable",
@@ -1366,32 +1380,40 @@ const migrateSchema = () => {
         "timestamp",
       ].join(", ");
 
-      sqlite.exec(`PRAGMA foreign_keys = OFF`);
-      sqlite.exec(`
-        CREATE TABLE ${tempTableName} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT,
-          username TEXT NOT NULL,
-          action TEXT NOT NULL,
-          resource_type TEXT NOT NULL,
-          resource_id TEXT,
-          resource_name TEXT,
-          details TEXT,
-          ip_address TEXT,
-          user_agent TEXT,
-          success INTEGER NOT NULL,
-          error_message TEXT,
-          timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-        );
+      sqlite.exec("PRAGMA foreign_keys = OFF");
+      try {
+        sqlite.exec(`
+          BEGIN;
+          CREATE TABLE ${tempTableName} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            username TEXT NOT NULL,
+            action TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT,
+            resource_name TEXT,
+            details TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            success INTEGER NOT NULL,
+            error_message TEXT,
+            timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+          );
 
-        INSERT INTO ${tempTableName} (${columns}) SELECT ${columns} FROM audit_logs;
+          INSERT INTO ${tempTableName} (${columns}) SELECT ${columns} FROM audit_logs;
 
-        DROP TABLE audit_logs;
+          DROP TABLE audit_logs;
 
-        ALTER TABLE ${tempTableName} RENAME TO audit_logs;
-      `);
-      sqlite.exec(`PRAGMA foreign_keys = ON`);
+          ALTER TABLE ${tempTableName} RENAME TO audit_logs;
+          COMMIT;
+        `);
+      } catch (rebuildError) {
+        if (sqlite.inTransaction) sqlite.exec("ROLLBACK");
+        throw rebuildError;
+      } finally {
+        sqlite.exec("PRAGMA foreign_keys = ON");
+      }
 
       databaseLogger.info("Successfully migrated audit_logs table to remove user_id NOT NULL constraint", {
         operation: "schema_migration_audit_user_id_nullable",
@@ -2232,7 +2254,7 @@ export { initializeDatabase };
  * final save, never on a signal of its own: a second handler used to exit
  * while plugins were still stopping.
  */
-export function closeDatabase(): void {
+export async function closeDatabase(): Promise<void> {
   try {
     if (sqlite) {
       sqlite.close();
@@ -2240,6 +2262,15 @@ export function closeDatabase(): void {
   } catch (error) {
     databaseLogger.warn("Error closing database connection", {
       operation: "db_close_error",
+      error: getErrorMessage(error),
+    });
+  }
+
+  try {
+    await closeRemoteDatabase();
+  } catch (error) {
+    databaseLogger.warn("Error closing remote database pool", {
+      operation: "db_remote_close_error",
       error: getErrorMessage(error),
     });
   }

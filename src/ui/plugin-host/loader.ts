@@ -8,7 +8,7 @@ import { setGuestRuntime } from "./guest-runtime";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { getBackendUrl } from "@/main-axios";
 import { createPluginApp, type PluginAppHandle } from "./app";
-import { installPluginHostBridge } from "./bridge";
+import { installPluginHostBridge, resetCurrentUserCache } from "./bridge";
 import {
   getPluginRecord,
   getPluginStoreState,
@@ -746,6 +746,7 @@ export function startPluginRuntime(
 
 /** Deactivates every plugin, on logout. */
 export function stopPluginRuntime(): Promise<void> {
+  resetCurrentUserCache();
   gateLayouts = false;
   if (startingRetry) clearTimeout(startingRetry);
   startingRetry = null;

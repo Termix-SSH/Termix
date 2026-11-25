@@ -646,10 +646,46 @@ export function findUnownedTableWrites(
       continue;
     }
 
+    const checkRefusedFunctions = () => {
+      let sawSetval = false;
+      for (let at = 0; at < tokens.length; at++) {
+        const token = tokens[at];
+        if (
+          (token.kind === "word" || token.kind === "quoted") &&
+          tokens[at + 1]?.value === "("
+        ) {
+          const fnName = token.value.toUpperCase();
+          if (REFUSED_FUNCTIONS.has(fnName)) {
+            problems.push(
+              `${token.value}() is not allowed in a plugin migration`,
+            );
+          }
+          if (fnName === "SETVAL") {
+            sawSetval = true;
+          }
+        }
+      }
+      // setval can break a core table's ids, so only the plugin's own.
+      let matchedSetval = 0;
+      for (const match of statement.matchAll(
+        /(?:["`[]?setval["`\]]?)\s*(?:\/\*[\s\S]*?\*\/\s*)*\(\s*([^,]*)/gi,
+      )) {
+        matchedSetval++;
+        const target = /'([^']*)'/.exec(match[1])?.[1];
+        if (!target || !target.startsWith(prefix)) {
+          problems.push("setval() may only target this plugin's own sequences");
+        }
+      }
+      if (sawSetval && matchedSetval === 0) {
+        problems.push("setval() may only target this plugin's own sequences");
+      }
+    };
+
     if (first === "INSERT" || first === "REPLACE") {
       const into = find("INTO");
       if (into > 0) table(into + 1);
       else problems.push(`${first} without INTO is not allowed`);
+      checkRefusedFunctions();
       continue;
     }
 
@@ -674,6 +710,7 @@ export function findUnownedTableWrites(
           "LOW_PRIORITY",
         ]),
       );
+      checkRefusedFunctions();
       continue;
     }
 
@@ -691,11 +728,13 @@ export function findUnownedTableWrites(
           if (tokens[at]?.value !== ",") break;
           at++;
         }
+        checkRefusedFunctions();
         continue;
       }
       at = table(skip(from + 1, ["ONLY"]));
       // DELETE FROM a, b USING ... deletes from both.
       while (tokens[at]?.value === ",") at = table(at + 1);
+      checkRefusedFunctions();
       continue;
     }
 
@@ -706,20 +745,7 @@ export function findUnownedTableWrites(
         problems.push("SELECT INTO is not allowed in a plugin migration");
         continue;
       }
-      for (let at = 0; at < tokens.length; at++) {
-        if (REFUSED_FUNCTIONS.has(upper(at)) && tokens[at + 1]?.value === "(") {
-          problems.push(
-            `${tokens[at].value}() is not allowed in a plugin migration`,
-          );
-        }
-      }
-      // setval can break a core table's ids, so only the plugin's own.
-      for (const match of statement.matchAll(/setval\s*\(\s*([^,]*)/gi)) {
-        const target = /'([^']*)'/.exec(match[1])?.[1];
-        if (!target || !target.startsWith(prefix)) {
-          problems.push("setval() may only target this plugin's own sequences");
-        }
-      }
+      checkRefusedFunctions();
       continue;
     }
 

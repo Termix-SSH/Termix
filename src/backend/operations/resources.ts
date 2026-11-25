@@ -45,8 +45,29 @@ export interface HostRead<T> {
 const cache = new Map<string, CacheEntry>();
 const MAX_ENTRIES = 20_000;
 
-function cacheKey(userId: string, actionId: string, hostId: number): string {
-  return `${userId}|${actionId}|${hostId}`;
+function stableSerialize(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) return "";
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableSerialize(v)}`).join(",")}}`;
+}
+
+function cacheKey(
+  userId: string,
+  actionId: string,
+  hostId: number,
+  input?: Record<string, unknown>,
+): string {
+  const inputKey = stableSerialize(input);
+  return inputKey
+    ? `${userId}|${actionId}|${inputKey}|${hostId}`
+    : `${userId}|${actionId}|${hostId}`;
 }
 
 /** After a change, the next read of this host goes back to the host. */
@@ -192,7 +213,7 @@ export async function readAcrossHosts<T>(
     options.hostIds?.join(",") ?? "*",
     () => loadProbeTargets(options.userId, options.hostIds),
   );
-  const level = action.hostAccess ?? "connect";
+  const level = action.hostAccess ?? "edit";
 
   const readOne = async (hostId: number): Promise<HostRead<T> | null> => {
     const access = await memo(scope.access, `${hostId}|${level}`, () =>
@@ -208,7 +229,12 @@ export async function readAcrossHosts<T>(
       if (!host || !matchesWhen(action.when, host)) return null;
     }
 
-    const key = cacheKey(options.userId, options.actionId, hostId);
+    const key = cacheKey(
+      options.userId,
+      options.actionId,
+      hostId,
+      options.input,
+    );
     const cached = cache.get(key);
     const fresh =
       cached &&

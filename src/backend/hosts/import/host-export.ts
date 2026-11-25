@@ -119,7 +119,20 @@ async function exportRow(
     socks5Username: resolvedHost.socks5Username || null,
     socks5Password: shareMode ? null : resolvedHost.socks5Password || null,
     socks5ProxyChain: resolvedHost.socks5ProxyChain
-      ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+      ? (() => {
+          const parsed = JSON.parse(resolvedHost.socks5ProxyChain as string);
+          if (!shareMode || !Array.isArray(parsed)) return parsed;
+          return parsed.map((node: unknown) => {
+            if (node && typeof node === "object" && !Array.isArray(node)) {
+              const { password: _pw, ...rest } = node as Record<
+                string,
+                unknown
+              >;
+              return rest;
+            }
+            return node;
+          });
+        })()
       : null,
     portKnockSequence: resolvedHost.portKnockSequence
       ? JSON.parse(resolvedHost.portKnockSequence as string)

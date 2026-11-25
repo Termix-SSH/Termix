@@ -17,7 +17,11 @@ import { cachedApiKeyMatch, rememberApiKeyMatch } from "./api-key-cache.js";
 import { nanoid } from "nanoid";
 import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
-import { sessionAccessRefusal } from "../auth/session-access.js";
+import {
+  normalizeAuthPath,
+  sessionAccessRefusal,
+} from "../auth/session-access.js";
+import { clearStepUp } from "../auth/step-up.js";
 import { endSocketSession, idleExpired } from "../auth/socket-sessions.js";
 import { keyScopeAllows, parseKeyScopes } from "../operations/key-scopes.js";
 import type { DeviceType } from "./user-agent-parser.js";
@@ -184,7 +188,8 @@ export function setPluginImpersonationCheck(
 }
 
 /** Whether an admin may send X-Admin-Target-User to this path. */
-export function allowsAdminImpersonation(path: string): boolean {
+export function allowsAdminImpersonation(rawPath: string): boolean {
+  const path = normalizeAuthPath(rawPath);
   if (IMPERSONATION_PATH_ALLOWLIST.some((pattern) => pattern.test(path))) {
     return true;
   }
@@ -479,6 +484,7 @@ class AuthManager {
           userId,
           sessionId,
         });
+        throw error;
       }
 
       return token;
@@ -1285,7 +1291,7 @@ class AuthManager {
           payload.userId,
         );
 
-        if (!user?.isAdmin) {
+        if (!user?.isAdmin || user.disabledAt) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {
@@ -1295,6 +1301,19 @@ class AuthManager {
             },
           );
           return res.status(403).json({ error: "Admin access required" });
+        }
+
+        if (payload.sessionId) {
+          createCurrentSessionRepository()
+            .touch(payload.sessionId)
+            .then(() => {})
+            .catch((error) => {
+              databaseLogger.warn("Failed to update session lastActiveAt", {
+                operation: "session_update_last_active",
+                sessionId: payload.sessionId,
+                error: getErrorMessage(error),
+              });
+            });
         }
 
         const authReq = req as AuthenticatedRequest;
@@ -1315,6 +1334,7 @@ class AuthManager {
   }
 
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
+    clearStepUp(userId, sessionId);
     const sessionRepository = createCurrentSessionRepository();
 
     try {

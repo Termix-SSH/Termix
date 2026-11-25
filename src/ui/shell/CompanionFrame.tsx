@@ -171,14 +171,24 @@ function CompanionLayout({
     [key],
   );
 
+  const dragCleanupRef = useRef<((commit?: boolean) => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.(false);
+    };
+  }, []);
+
   const startResize = (event: React.MouseEvent) => {
     event.preventDefault();
     const root = rootRef.current;
     if (!root) return;
+    dragCleanupRef.current?.(false);
     const rect = root.getBoundingClientRect();
     const total = side === "bottom" ? rect.height : rect.width;
     const max = Math.max(MIN_SIZE, total - MIN_SIZE);
     setDragging(true);
+    let active = true;
     const move = (e: MouseEvent) => {
       const raw =
         side === "right"
@@ -190,13 +200,22 @@ function CompanionLayout({
         size: Math.round(Math.min(max, Math.max(MIN_SIZE, raw))),
       });
     };
-    const up = () => {
-      setDragging(false);
+    const cleanup = (commit = true) => {
+      if (!active) return;
+      active = false;
       window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("blur", onEnd);
+      if (dragCleanupRef.current === cleanup) {
+        dragCleanupRef.current = null;
+      }
+      if (commit) setDragging(false);
     };
+    const onEnd = () => cleanup(true);
+    dragCleanupRef.current = cleanup;
     window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("blur", onEnd);
   };
 
   const getHandle = useCallback(

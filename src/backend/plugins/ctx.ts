@@ -1154,9 +1154,12 @@ export function createPluginContext(
           `Plugin ${pluginId} called ctx.asUser without a user id`,
         );
       }
-      if (!declared.includes("users:impersonate")) {
-        throw capabilityRefused(pluginId, "users:impersonate");
-      }
+      await assertCapability(
+        pluginId,
+        "users:impersonate",
+        declared,
+        "as_user",
+      );
       // Nothing runs as an account that is turned off or gone.
       const { createCurrentUserRepository } =
         await import("../database/repositories/factory.js");

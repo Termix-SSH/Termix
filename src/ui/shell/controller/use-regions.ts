@@ -25,7 +25,8 @@ function startDockDrag(
   sign: 1 | -1,
   setWidth: (width: number) => void,
   setDragging: (dragging: boolean) => void,
-) {
+  onDone: () => void,
+): (commit?: boolean) => void {
   e.preventDefault();
   setDragging(true);
   const startX = e.clientX;
@@ -33,6 +34,7 @@ function startDockDrag(
   const scale = remScale();
   let frame = 0;
   let clientX = startX;
+  let active = true;
   function onMove(ev: MouseEvent) {
     clientX = ev.clientX;
     if (frame) return;
@@ -41,15 +43,26 @@ function startDockDrag(
       setWidth(clampWidth(startW + (sign * (clientX - startX)) / scale));
     });
   }
-  function onUp() {
+  function stop(commit = true) {
+    if (!active) return;
+    active = false;
     cancelAnimationFrame(frame);
-    setWidth(clampWidth(startW + (sign * (clientX - startX)) / scale));
-    setDragging(false);
     window.removeEventListener("mousemove", onMove);
-    window.removeEventListener("mouseup", onUp);
+    window.removeEventListener("mouseup", onEnd);
+    window.removeEventListener("blur", onEnd);
+    onDone();
+    if (commit) {
+      setWidth(clampWidth(startW + (sign * (clientX - startX)) / scale));
+      setDragging(false);
+    }
+  }
+  function onEnd() {
+    stop(true);
   }
   window.addEventListener("mousemove", onMove);
-  window.addEventListener("mouseup", onUp);
+  window.addEventListener("mouseup", onEnd);
+  window.addEventListener("blur", onEnd);
+  return stop;
 }
 
 /** The left sidebar and the right dock: what they show, open state and size. */
@@ -179,21 +192,51 @@ export function useRegions(isMobile: boolean): ShellRegions {
     }
   }
 
+  const dragCleanupRef = useRef<((commit?: boolean) => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.(false);
+    };
+  }, []);
+
   const startLeftResize = useCallback(
-    (e: React.MouseEvent) =>
-      startDockDrag(e, sidebarWidth, 1, setSidebarWidth, setSidebarDragging),
+    (e: React.MouseEvent) => {
+      dragCleanupRef.current?.(false);
+      const cleanup = startDockDrag(
+        e,
+        sidebarWidth,
+        1,
+        setSidebarWidth,
+        setSidebarDragging,
+        () => {
+          if (dragCleanupRef.current === cleanup) {
+            dragCleanupRef.current = null;
+          }
+        },
+      );
+      dragCleanupRef.current = cleanup;
+    },
     [sidebarWidth],
   );
   // Same drag, mirrored: the right dock grows as the pointer moves left.
   const startRightResize = useCallback(
-    (e: React.MouseEvent) =>
-      startDockDrag(
+    (e: React.MouseEvent) => {
+      dragCleanupRef.current?.(false);
+      const cleanup = startDockDrag(
         e,
         rightSidebarWidth,
         -1,
         setRightSidebarWidth,
         setRightSidebarDragging,
-      ),
+        () => {
+          if (dragCleanupRef.current === cleanup) {
+            dragCleanupRef.current = null;
+          }
+        },
+      );
+      dragCleanupRef.current = cleanup;
+    },
     [rightSidebarWidth],
   );
 

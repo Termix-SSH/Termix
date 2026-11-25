@@ -30,6 +30,7 @@ class FieldCrypto {
       "keyPassword",
       "sudoPassword",
       "socks5Password",
+      "socks5ProxyChain",
     ]),
     ssh_credentials: new Set([
       "password",

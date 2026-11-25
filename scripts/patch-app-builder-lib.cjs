@@ -34,12 +34,18 @@ function patchModuleManager(filePath) {
 
   if (!source.includes(SIGNATURE_PATCHED)) {
     if (!source.includes(SIGNATURE)) {
-      console.warn(
-        'app-builder-lib patch "npm alias version check" was not applied; semverSatisfies changed upstream.',
-      );
-      return;
+      const msg =
+        '[patch-app-builder-lib] Patch "npm alias version check" failed: semverSatisfies signature not found (changed upstream).';
+      console.error(msg);
+      throw new Error(msg);
     }
     source = source.replace(SIGNATURE, SIGNATURE_PATCHED);
+  }
+  if (!source.includes(CALL_PATCHED) && !source.includes(CALL)) {
+    const msg =
+      '[patch-app-builder-lib] Patch "npm alias version check" failed: semverSatisfies call site not found (changed upstream).';
+    console.error(msg);
+    throw new Error(msg);
   }
   source = source.replaceAll(CALL, CALL_PATCHED);
 

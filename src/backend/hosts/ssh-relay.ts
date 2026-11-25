@@ -54,51 +54,75 @@ async function handleRelay(
     close(ws, 1008, "A host is required");
     return;
   }
-  if ((open.get(userId) ?? 0) >= MAX_RELAYS_PER_USER) {
+  const currentCount = open.get(userId) ?? 0;
+  if (currentCount >= MAX_RELAYS_PER_USER) {
     close(ws, 1013, "Too many connections");
     return;
   }
+  open.set(userId, currentCount + 1);
+  let slotReleased = false;
+  const releaseSlot = () => {
+    if (slotReleased) return;
+    slotReleased = true;
+    const next = (open.get(userId) ?? 1) - 1;
+    if (next <= 0) open.delete(userId);
+    else open.set(userId, next);
+  };
 
-  // The relay only carries bytes and the client logs in itself, so a share
-  // with no login of its own still gets through.
-  const options = { allowMissingLogin: true };
-  const host = syncId
-    ? await resolveHostBySyncId(syncId, userId, options)
-    : await resolveHostById(hostId, userId, options);
-  if (!host) {
-    close(ws, 1008, "Host not found or access denied");
-    return;
-  }
-
-  const { assertConnectAllowed, ConnectPolicyError } =
-    await import("./connect-policy.js");
+  let host: Awaited<ReturnType<typeof resolveHostById>>;
   try {
-    await assertConnectAllowed({
-      userId,
-      hostId: Number((host as { id?: unknown }).id),
-      protocol: "ssh",
-      purpose: "relay",
-      profile: "stream",
-      interactive: false,
-      origin: "core",
-    });
-  } catch (error) {
-    if (error instanceof ConnectPolicyError) {
-      close(ws, 1008, "Connection not allowed");
-    } else {
-      close(ws, 1011, "Could not open the connection");
+    // The relay only carries bytes and the client logs in itself, so a share
+    // with no login of its own still gets through.
+    const options = { allowMissingLogin: true };
+    host = syncId
+      ? await resolveHostBySyncId(syncId, userId, options)
+      : await resolveHostById(hostId, userId, options);
+    if (!host) {
+      releaseSlot();
+      close(ws, 1008, "Host not found or access denied");
+      return;
     }
+
+    const { assertConnectAllowed, ConnectPolicyError } =
+      await import("./connect-policy.js");
+    try {
+      await assertConnectAllowed({
+        userId,
+        hostId: Number((host as { id?: unknown }).id),
+        protocol: "ssh",
+        purpose: "relay",
+        profile: "stream",
+        interactive: false,
+        origin: "core",
+      });
+    } catch (error) {
+      releaseSlot();
+      if (error instanceof ConnectPolicyError) {
+        close(ws, 1008, "Connection not allowed");
+      } else {
+        close(ws, 1011, "Could not open the connection");
+      }
+      return;
+    }
+  } catch (error) {
+    releaseSlot();
+    sshLogger.warn("A relay failed before opening its transport", {
+      operation: "ssh_relay_setup",
+      hostId: syncId ? undefined : hostId,
+      syncId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    close(ws, 1011, "Could not open the connection");
     return;
   }
 
-  open.set(userId, (open.get(userId) ?? 0) + 1);
   let stream: Duplex | null = null;
   let jumpEnd: (() => void) | null = null;
   let done = false;
   const finish = () => {
     if (done) return;
     done = true;
-    open.set(userId, Math.max(0, (open.get(userId) ?? 1) - 1));
+    releaseSlot();
     stream?.destroy();
     jumpEnd?.();
     close(ws, 1000, "Closed");
@@ -112,6 +136,11 @@ async function handleRelay(
       port: sshHost.port || 22,
     } as MutableConnectConfig;
     const { jumpClient } = await openSshTransport(sshHost, config);
+    if (done) {
+      jumpClient?.end();
+      (config.sock as Duplex | undefined)?.destroy();
+      return;
+    }
     jumpEnd = () => jumpClient?.end();
     stream = (config.sock as Duplex | undefined) ?? null;
     if (!stream) {

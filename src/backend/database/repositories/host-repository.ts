@@ -352,6 +352,9 @@ export class HostRepository {
     userId: string,
     hostId: number,
   ): Promise<{ syncId: string | null } | null> {
+    const existing = await this.findByIdForUser(userId, hostId);
+    if (!existing) return null;
+
     await this.deleteAccessForHost(hostId);
 
     const rows = await deleteReturning(

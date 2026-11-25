@@ -4,6 +4,7 @@
 // ps and killed leaves first. Windows uses taskkill /T.
 
 const { spawnSync } = require("child_process");
+const fs = require("fs");
 
 const BACKEND_STOP_TIMEOUT_MS = 5000;
 
@@ -180,11 +181,55 @@ function stopBackendProcess(child, deps = {}) {
   });
 }
 
+function isTermixBackendProcess(pid, deps = {}) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  const platform = deps.platform ?? process.platform;
+  const run = deps.spawnSync ?? spawnSync;
+  const readFileSync = deps.readFileSync ?? fs.readFileSync;
+  const backendPattern = /starter\.js|Termix backend/i;
+  try {
+    if (platform === "linux") {
+      const cmdline = readFileSync(`/proc/${pid}/cmdline`, "utf8").replace(
+        /\0/g,
+        " ",
+      );
+      return backendPattern.test(cmdline);
+    }
+    if (platform === "darwin") {
+      const result = run("ps", ["-p", String(pid), "-o", "command="], {
+        encoding: "utf8",
+        timeout: 3000,
+      });
+      return result?.status === 0 && backendPattern.test(result.stdout || "");
+    }
+    if (platform === "win32") {
+      const result = run(
+        "powershell",
+        [
+          "-NoProfile",
+          "-Command",
+          `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`,
+        ],
+        {
+          encoding: "utf8",
+          windowsHide: true,
+          timeout: 3000,
+        },
+      );
+      return result?.status === 0 && backendPattern.test(result.stdout || "");
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 module.exports = {
   BACKEND_STOP_TIMEOUT_MS,
   killProcessTree,
   listDescendants,
   wrapUtilityProcess,
   isAlive,
+  isTermixBackendProcess,
   stopBackendProcess,
 };

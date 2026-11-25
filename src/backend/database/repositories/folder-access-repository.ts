@@ -1,7 +1,11 @@
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { folderAccess, roles, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { insertReturning } from "./returning.js";
+
+function escapeLikePrefix(prefix: string): string {
+  return prefix.replace(/[!%_]/g, "!$&");
+}
 
 export type FolderAccessRecord = typeof folderAccess.$inferSelect;
 
@@ -159,29 +163,61 @@ export class FolderAccessRepository {
     newName: string,
   ): Promise<void> {
     const prefix = `${oldName} / `;
-    const rows = await this.context.drizzle
-      .select({ id: folderAccess.id, folder: folderAccess.folder })
-      .from(folderAccess)
-      .where(
-        and(
-          eq(folderAccess.ownerUserId, ownerUserId),
-          or(
-            eq(folderAccess.folder, oldName),
-            like(folderAccess.folder, `${prefix}%`),
-          ),
-        ),
-      );
-    for (const row of rows) {
-      const renamed =
-        row.folder === oldName
-          ? newName
-          : `${newName} / ${row.folder.slice(prefix.length)}`;
-      await this.context.drizzle
-        .update(folderAccess)
-        .set({ folder: renamed })
-        .where(eq(folderAccess.id, row.id));
+    const childPattern = `${escapeLikePrefix(prefix)}%`;
+    const where = and(
+      eq(folderAccess.ownerUserId, ownerUserId),
+      or(
+        eq(folderAccess.folder, oldName),
+        sql`${folderAccess.folder} LIKE ${childPattern} ESCAPE '!'`,
+      ),
+    );
+
+    let updated = 0;
+    if (this.context.dialect === "sqlite") {
+      updated = this.context.drizzle.transaction((tx) => {
+        const rows = tx
+          .select({ id: folderAccess.id, folder: folderAccess.folder })
+          .from(folderAccess)
+          .where(where)
+          .all();
+        for (const row of rows) {
+          if (row.folder !== oldName && !row.folder.startsWith(prefix)) {
+            continue;
+          }
+          const renamed =
+            row.folder === oldName
+              ? newName
+              : `${newName} / ${row.folder.slice(prefix.length)}`;
+          tx.update(folderAccess)
+            .set({ folder: renamed })
+            .where(eq(folderAccess.id, row.id))
+            .run();
+        }
+        return rows.length;
+      });
+    } else {
+      updated = await this.context.drizzle.transaction(async (tx) => {
+        const rows = await tx
+          .select({ id: folderAccess.id, folder: folderAccess.folder })
+          .from(folderAccess)
+          .where(where);
+        for (const row of rows) {
+          if (row.folder !== oldName && !row.folder.startsWith(prefix)) {
+            continue;
+          }
+          const renamed =
+            row.folder === oldName
+              ? newName
+              : `${newName} / ${row.folder.slice(prefix.length)}`;
+          await tx
+            .update(folderAccess)
+            .set({ folder: renamed })
+            .where(eq(folderAccess.id, row.id));
+        }
+        return rows.length;
+      });
     }
-    if (rows.length) await this.afterWrite();
+    if (updated > 0) await this.afterWrite();
   }
 
   private async afterWrite(): Promise<void> {

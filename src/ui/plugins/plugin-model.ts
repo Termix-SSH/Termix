@@ -640,3 +640,18 @@ export function isLayoutOffer(plugin: PluginEntry): boolean {
 export function hasSourceBadge(source: string): boolean {
   return source === "community" || source === "custom";
 }
+
+/** Only http(s) URLs may be rendered as clickable external links. */
+export function safeExternalUrl(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}

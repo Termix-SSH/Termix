@@ -22,6 +22,7 @@ const { classifyBackendFailure } = require("./backend-failure.cjs");
 const {
   killProcessTree,
   wrapUtilityProcess,
+  isTermixBackendProcess,
   stopBackendProcess,
 } = require("./backend-process.cjs");
 const fs = require("fs");
@@ -451,15 +452,18 @@ function isInsecureModeEnabled() {
 }
 
 function isPrivateNetworkHost(hostname) {
+  const normalized = String(hostname || "")
+    .replace(/^\[|\]$/g, "")
+    .toLowerCase();
   if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1"
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1"
   ) {
     return true;
   }
 
-  const ipv4Match = hostname.match(
+  const ipv4Match = normalized.match(
     /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
   );
   if (ipv4Match) {
@@ -472,7 +476,10 @@ function isPrivateNetworkHost(hostname) {
     );
   }
 
-  if (hostname.startsWith("fc") || hostname.startsWith("fd")) {
+  if (
+    normalized.includes(":") &&
+    (normalized.startsWith("fc") || normalized.startsWith("fd"))
+  ) {
     return true;
   }
 
@@ -726,7 +733,11 @@ function getTempRoot() {
 
 function sanitizeFileName(fileName) {
   const baseName = path.basename(String(fileName || "file"));
-  return baseName.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_") || "file";
+  const cleaned = baseName.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_");
+  if (!cleaned || cleaned === "." || cleaned === "..") {
+    return "file";
+  }
+  return cleaned;
 }
 
 function decodeFileContent(content, encoding) {
@@ -1013,13 +1024,21 @@ function reapOrphanedBackendProcess() {
   if (!Number.isInteger(recordedPid) || recordedPid <= 0) return;
 
   try {
-    // Signal 0 does not kill the process -- it only checks whether a
-    // process with this PID exists and is signalable, throwing ESRCH if
-    // not. This avoids killing an unrelated process that happens to have
-    // reused the same PID since the last run.
     process.kill(recordedPid, 0);
   } catch {
     // No live process at that PID; nothing to reap.
+    try {
+      fs.unlinkSync(pidFilePath);
+    } catch {
+      // already absent
+    }
+    return;
+  }
+
+  if (!isTermixBackendProcess(recordedPid)) {
+    logToFile(
+      `PID ${recordedPid} from backend.pid does not match a Termix backend process; skipping reap`,
+    );
     try {
       fs.unlinkSync(pidFilePath);
     } catch {
@@ -1596,7 +1615,7 @@ function createWindow() {
               /;\s*SameSite=Lax/gi,
               "; SameSite=None",
             );
-            if (!modified.includes("SameSite=")) {
+            if (!/;\s*samesite=/i.test(modified)) {
               modified += "; SameSite=None";
             }
             if (
@@ -1787,7 +1806,7 @@ ipc.handle("external-browser-login", async (_event, authUrl, callbackPort) => {
     let timeout;
     let settled = false;
     const server = http.createServer((req, res) => {
-      const url = new URL(req.url || "/", `http://localhost:${callbackPort}`);
+      const url = new URL(req.url || "/", `http://127.0.0.1:${callbackPort}`);
       if (url.pathname === "/oidc-callback") {
         const success = url.searchParams.get("success");
         const error = url.searchParams.get("error");
@@ -1842,7 +1861,7 @@ ipc.handle("external-browser-login", async (_event, authUrl, callbackPort) => {
 
     server.once("error", fail);
 
-    server.listen(callbackPort, "localhost", async () => {
+    server.listen(callbackPort, "127.0.0.1", async () => {
       try {
         await shell.openExternal(authUrl);
       } catch (error) {
@@ -2094,23 +2113,33 @@ ipc.handle("create-temp-file", async (_event, fileData) => {
 });
 
 ipc.handle("create-temp-folder", async (_event, folderData) => {
+  let tempDir = null;
   try {
     const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
+    tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
     const folderPath = path.join(
       tempDir,
       sanitizeFileName(folderData?.folderName || "files"),
     );
-    fs.mkdirSync(folderPath, { recursive: true });
+    const resolvedFolder = path.resolve(folderPath);
+    fs.mkdirSync(resolvedFolder, { recursive: true });
 
     for (const file of folderData?.files || []) {
-      const relativePath = String(file.relativePath || "")
+      const rawSegments = String(file.relativePath || "")
         .split(/[\\/]+/)
+        .filter(Boolean);
+      if (rawSegments.some((seg) => seg === "." || seg === "..")) {
+        throw new Error("Invalid relative path");
+      }
+      const relativePath = rawSegments
         .map(sanitizeFileName)
         .filter(Boolean)
         .join(path.sep);
       if (!relativePath) continue;
-      const targetPath = path.join(folderPath, relativePath);
+      const targetPath = path.resolve(resolvedFolder, relativePath);
+      if (!targetPath.startsWith(resolvedFolder + path.sep)) {
+        throw new Error("Invalid relative path");
+      }
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
       fs.writeFileSync(
         targetPath,
@@ -2118,9 +2147,16 @@ ipc.handle("create-temp-folder", async (_event, folderData) => {
       );
     }
 
-    tempFiles.set(tempId, { path: folderPath, dir: tempDir });
-    return { success: true, tempId, path: folderPath };
+    tempFiles.set(tempId, { path: resolvedFolder, dir: tempDir });
+    return { success: true, tempId, path: resolvedFolder };
   } catch (error) {
+    if (tempDir) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup failure
+      }
+    }
     return { success: false, error: error.message };
   }
 });

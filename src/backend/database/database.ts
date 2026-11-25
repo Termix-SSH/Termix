@@ -68,6 +68,7 @@ import {
 } from "../updates/update-channel.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
+import { SystemCrypto } from "../utils/system-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
@@ -713,7 +714,7 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
 
-    const isValid = true;
+    const isValid = await SystemCrypto.getInstance().validateJWTSecret();
     if (!isValid) {
       await authManager.initialize();
     }
@@ -814,14 +815,14 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       tempPath,
     });
 
-    const exportDb = new Database(tempPath);
-    // A scratch file: without these every row is its own synced commit, and
-    // plugin rows may point at hosts the export leaves out.
-    exportDb.pragma("journal_mode = OFF");
-    exportDb.pragma("synchronous = OFF");
-    exportDb.pragma("foreign_keys = OFF");
-
+    let exportDb: Database.Database | null = null;
     try {
+      exportDb = new Database(tempPath);
+      // A scratch file: without these every row is its own synced commit, and
+      // plugin rows may point at hosts the export leaves out.
+      exportDb.pragma("journal_mode = OFF");
+      exportDb.pragma("synchronous = OFF");
+      exportDb.pragma("foreign_keys = OFF");
       exportDb.exec(`
         CREATE TABLE users (
           id TEXT PRIMARY KEY,
@@ -1074,7 +1075,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       );
       await writeHostDefaultsToExport(exportDb, userId);
     } catch (writeError) {
-      exportDb.close();
+      exportDb?.close();
       removeExportFile(exportFile);
       throw writeError;
     }
@@ -1744,7 +1745,7 @@ async function initializeSecurity() {
 
     DataCrypto.initialize();
 
-    const isValid = true;
+    const isValid = await SystemCrypto.getInstance().validateJWTSecret();
     if (!isValid) {
       throw new Error("Security system validation failed");
     }

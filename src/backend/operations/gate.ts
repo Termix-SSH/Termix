@@ -280,11 +280,14 @@ async function prepare(request: OperationRequest): Promise<Prepared> {
   };
 }
 
-function checkKeyScope(request: OperationRequest, action: OperationAction) {
+function checkKeyScope(
+  request: OperationRequest,
+  effectiveRisk: OperationRisk,
+) {
   const scopes = request.apiKeyScopes;
   if (scopes === undefined || scopes === null) return;
   if (scopes.includes("operations:run")) return;
-  if (scopes.includes("operations:read") && action.risk === "read") return;
+  if (scopes.includes("operations:read") && effectiveRisk === "read") return;
   throw new OperationError("SCOPE", "This API key may not run this action");
 }
 
@@ -406,13 +409,19 @@ async function execute(
       data,
     };
     if (runId) {
+      const undoFields = action.undo
+        ? (getAction(action.undo)?.action.inputs ?? action.inputs)
+        : action.inputs;
+      const safeUndoInput = result.undoInput
+        ? redactFields(undoFields, result.undoInput)
+        : null;
       await repository.updateRunFrom(runId, "running", {
         status: "success",
         summary: capText(result.summary ?? "", 2000),
         changed: result.changed ?? null,
         output:
           data === undefined ? null : capText(JSON.stringify(data), MAX_OUTPUT),
-        undoInput: result.undoInput ? JSON.stringify(result.undoInput) : null,
+        undoInput: safeUndoInput ? JSON.stringify(safeUndoInput) : null,
         sealedInput: null,
         finishedAt: now(),
       });
@@ -544,8 +553,8 @@ async function requestApproval(
 export async function runOperation(
   request: OperationRequest,
 ): Promise<OperationOutcome> {
-  const registration = getAction(request.actionId);
-  if (registration) checkKeyScope(request, registration.action);
+  const prepared = await prepare(request);
+  checkKeyScope(request, prepared.effectiveRisk);
 
   const repository = createCurrentOperationRepository();
   if (request.idempotencyKey) {
@@ -556,7 +565,6 @@ export async function runOperation(
     if (earlier) return outcomeOf(earlier);
   }
 
-  const prepared = await prepare(request);
   const { action } = prepared;
   const dryRun = request.dryRun === true;
   const isRead = action.risk === "read";
@@ -691,7 +699,21 @@ export async function decideOperationApproval(options: {
 
   // Approving needs the same rights as running it.
   const registration = getAction(run.actionId);
-  if (registration) {
+  if (!registration) {
+    const approver = await createCurrentUserRepository().findById(approverId);
+    if (!approver?.isAdmin) {
+      throw new OperationError(
+        "FORBIDDEN",
+        "You need the same access as this action to approve it",
+      );
+    }
+    if (approve) {
+      throw new OperationError(
+        "NOT_FOUND",
+        `No action "${run.actionId}" is available`,
+      );
+    }
+  } else {
     const permissions = PermissionManager.getInstance();
     const needed = qualifyPermission(
       registration.pluginId,

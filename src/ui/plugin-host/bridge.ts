@@ -115,6 +115,15 @@ let currentUser: Promise<{
   isAdmin: boolean;
 } | null> | null = null;
 
+/** Clears the cached user identity on logout or runtime teardown. */
+export function resetCurrentUserCache(): void {
+  currentUser = null;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("termix:logout", resetCurrentUserCache);
+}
+
 function loadCurrentUser() {
   if (!currentUser) {
     currentUser = getUserInfo()

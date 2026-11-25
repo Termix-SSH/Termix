@@ -1,8 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { pluginSettings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { insertReturning, updateReturning } from "./returning.js";
 
 export type PluginSettingsRecord = typeof pluginSettings.$inferSelect;
 
@@ -130,28 +129,105 @@ export class PluginSettingsRepository {
       eq(pluginSettings.key, key),
     )!;
 
-    const existing = await this.context.drizzle
-      .select()
-      .from(pluginSettings)
-      .where(where)
-      .limit(1);
+    if (this.context.dialect === "sqlite") {
+      this.context.drizzle.transaction((tx) => {
+        const existing = tx
+          .select({ id: pluginSettings.id })
+          .from(pluginSettings)
+          .where(where)
+          .orderBy(asc(pluginSettings.id))
+          .all();
 
-    if (existing[0]) {
-      await updateReturning(
-        this.context,
-        pluginSettings,
-        { value, encrypted, updatedAt: now },
-        where,
-      );
+        if (existing[0]) {
+          tx.update(pluginSettings)
+            .set({ value, encrypted, updatedAt: now })
+            .where(eq(pluginSettings.id, existing[0].id))
+            .run();
+          if (existing.length > 1) {
+            tx.delete(pluginSettings)
+              .where(
+                inArray(
+                  pluginSettings.id,
+                  existing.slice(1).map((row) => row.id),
+                ),
+              )
+              .run();
+          }
+        } else {
+          tx.insert(pluginSettings)
+            .values({
+              pluginId,
+              scope,
+              scopeId,
+              key,
+              value,
+              encrypted,
+              updatedAt: now,
+            })
+            .run();
+        }
+      });
     } else {
-      await insertReturning(this.context, pluginSettings, {
-        pluginId,
-        scope,
-        scopeId,
-        key,
-        value,
-        encrypted,
-        updatedAt: now,
+      await this.context.drizzle.transaction(async (tx) => {
+        const exec = (
+          tx as unknown as {
+            execute?: (query: ReturnType<typeof sql>) => Promise<unknown>;
+          }
+        ).execute;
+
+        let mysqlLockKey: string | null = null;
+        if (scopeId === null && typeof exec === "function") {
+          const lockKey = `termix_ps:${pluginId}:${scope}:${key}`;
+          if (this.context.dialect === "postgres") {
+            await exec.call(
+              tx,
+              sql`SELECT pg_advisory_xact_lock(1952805485, hashtext(${lockKey}))`,
+            );
+          } else if (this.context.dialect === "mysql") {
+            const boundedKey = lockKey.slice(0, 64);
+            await exec.call(tx, sql`SELECT GET_LOCK(${boundedKey}, 10)`);
+            mysqlLockKey = boundedKey;
+          }
+        }
+
+        try {
+          const existing = await tx
+            .select({ id: pluginSettings.id })
+            .from(pluginSettings)
+            .where(where)
+            .orderBy(asc(pluginSettings.id));
+
+          if (existing[0]) {
+            await tx
+              .update(pluginSettings)
+              .set({ value, encrypted, updatedAt: now })
+              .where(eq(pluginSettings.id, existing[0].id));
+            if (existing.length > 1) {
+              await tx.delete(pluginSettings).where(
+                inArray(
+                  pluginSettings.id,
+                  existing.slice(1).map((row) => row.id),
+                ),
+              );
+            }
+          } else {
+            await tx.insert(pluginSettings).values({
+              pluginId,
+              scope,
+              scopeId,
+              key,
+              value,
+              encrypted,
+              updatedAt: now,
+            });
+          }
+        } finally {
+          if (mysqlLockKey && typeof exec === "function") {
+            await exec
+              .call(tx, sql`SELECT RELEASE_LOCK(${mysqlLockKey})`)
+              .catch(() => undefined);
+          }
+        }
       });
     }
 

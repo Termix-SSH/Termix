@@ -120,7 +120,7 @@ export function registerStepUpRoutes(
     "/auth/step-up/:factorId/verify",
     authenticateJWT,
     async (req, res) => {
-      const { userId } = req as AuthenticatedRequest;
+      const { userId, sessionId } = req as AuthenticatedRequest;
       try {
         const lock = loginRateLimiter.isTOTPLocked(userId);
         if (lock.locked) {
@@ -152,7 +152,7 @@ export function registerStepUpRoutes(
           return res.status(401).json({ error: message });
         }
         loginRateLimiter.resetTOTPAttempts(userId);
-        recordStepUp(userId);
+        recordStepUp(userId, Date.now(), sessionId);
         res.json({ success: true });
       } catch (error) {
         fail(res, error);

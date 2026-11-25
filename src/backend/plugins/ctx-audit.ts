@@ -65,13 +65,21 @@ export function createPluginAuditReader(
       }
       let remove: (() => void) | null = null;
       let forgetBag: (() => void) | null = null;
+      let disposed = false;
+      const cleanup = () => {
+        disposed = true;
+        remove?.();
+        remove = null;
+      };
       // Granted state is checked once, then every line is delivered until
       // unsubscribed; a revoked grant stops the next subscribe.
       void require("audit_subscribe")
         .then(async () => {
+          if (disposed) return;
           await audit("audit_subscribe", "listened to the audit log", {
             success: true,
           });
+          if (disposed) return;
           remove = onAuditEntry((entry) => {
             handler({
               timestamp: entry.timestamp.toISOString(),
@@ -93,10 +101,9 @@ export function createPluginAuditReader(
           });
         })
         .catch(() => {});
-      forgetBag = bag.add(() => remove?.(), "audit subscription");
+      forgetBag = bag.add(cleanup, "audit subscription");
       return () => {
-        remove?.();
-        remove = null;
+        cleanup();
         forgetBag?.();
       };
     },

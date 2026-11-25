@@ -51,6 +51,7 @@ import {
   orderByRisk,
   reportIssueUrl,
   requestFeatureUrl,
+  safeExternalUrl,
   type PluginEntry,
 } from "./plugin-model";
 import { openPluginSettings } from "./open-plugins";
@@ -101,6 +102,8 @@ export function PluginDetail({
   const feedbackUrl = plugin.isBeta
     ? betaFeedbackUrl(plugin, import.meta.env.VITE_APP_VERSION || undefined)
     : null;
+  const docsUrl = safeExternalUrl(plugin.docs);
+  const repositoryUrl = safeExternalUrl(plugin.repository);
   const tryableBeta = betaToTry(plugin);
 
   return (
@@ -490,9 +493,9 @@ export function PluginDetail({
             </SectionCard>
           )}
 
-          {plugin.docs && (
+          {docsUrl && (
             <a
-              href={plugin.docs}
+              href={docsUrl}
               target="_blank"
               rel="noreferrer"
               className={LINK_ROW}
@@ -574,16 +577,16 @@ export function PluginDetail({
             </a>
           )}
 
-          {plugin.repository && (
+          {repositoryUrl && (
             <a
-              href={plugin.repository}
+              href={repositoryUrl}
               target="_blank"
               rel="noreferrer"
               className={LINK_ROW}
             >
               <ExternalLink className="size-3.5 shrink-0" />
               <span className="truncate">
-                {plugin.repository.replace(/^https?:\/\//, "")}
+                {repositoryUrl.replace(/^https?:\/\//, "")}
               </span>
             </a>
           )}
@@ -745,7 +748,14 @@ function ProvenanceFact({ provenance }: { provenance: PluginProvenance }) {
       </span>
     );
   }
-  const href = provenance.runUrl ?? provenance.bundleUrl;
+  const href = safeExternalUrl(provenance.runUrl ?? provenance.bundleUrl);
+  if (!href) {
+    return (
+      <span title={t("plugins.manager.provenance.verifiedHint")}>
+        {t("plugins.manager.provenance.verified")}
+      </span>
+    );
+  }
   return (
     <a
       href={href}

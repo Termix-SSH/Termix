@@ -92,6 +92,39 @@ export function assertUrlMatchesDialect(
   }
 }
 
+type ClosablePool = {
+  end: (callback?: (err?: unknown) => void) => unknown;
+};
+
+let activeRemotePool: ClosablePool | null = null;
+
+/**
+ * Closes the active remote connection pool (pg.Pool or mysql2 Pool), if any.
+ */
+export async function closeRemoteDatabase(): Promise<void> {
+  const pool = activeRemotePool;
+  activeRemotePool = null;
+  if (!pool || typeof pool.end !== "function") return;
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const done = (err?: unknown) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve();
+    };
+    try {
+      const result = pool.end(done);
+      if (result && typeof (result as Promise<unknown>).then === "function") {
+        (result as Promise<unknown>).then(() => done(), done);
+      }
+    } catch (error) {
+      done(error);
+    }
+  });
+}
+
 export async function connectRemoteDatabase(
   dialect: DatabaseDialect,
   env: NodeJS.ProcessEnv = process.env,
@@ -119,6 +152,7 @@ export async function connectRemoteDatabase(
     const pool = guardPgPool(
       new Pool({ connectionString: url, max, ...(ssl ? { ssl } : {}) }),
     );
+    activeRemotePool = pool as unknown as ClosablePool;
     return drizzle({ client: pool }) as unknown as PortableDatabase;
   }
 
@@ -134,5 +168,6 @@ export async function connectRemoteDatabase(
       ...(ssl ? { ssl } : {}),
     }),
   );
+  activeRemotePool = pool as unknown as ClosablePool;
   return drizzle({ client: pool }) as unknown as PortableDatabase;
 }
