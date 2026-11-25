@@ -59,6 +59,10 @@ const { windowsLinuxMenuTemplate } = require("./keyboard-shortcuts.cjs");
 const { quitApp, closeAction, showTrayNotice } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { forcedScaleFactor } = require("./linux-scale.cjs");
+const {
+  shouldDisableHardwareAcceleration,
+  createGpuCrashTracker,
+} = require("./gpu-config.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
 
@@ -521,8 +525,47 @@ if (process.platform === "linux") {
   }
 }
 
-if (process.platform === "win32" || process.env.ELECTRON_DISABLE_GPU === "1") {
+let initialDesktopSettings = {};
+try {
+  initialDesktopSettings = desktopSettings.getDesktopSettings();
+} catch (error) {
+  logToFile(
+    "[gpu] Failed to read desktop settings before startup:",
+    error.message,
+  );
+}
+
+const hardwareAccelerationDisabled = shouldDisableHardwareAcceleration({
+  platform: process.platform,
+  env: process.env,
+  settings: initialDesktopSettings,
+});
+
+if (hardwareAccelerationDisabled) {
   app.disableHardwareAcceleration();
+} else {
+  const gpuCrashTracker = createGpuCrashTracker({
+    onThresholdReached: (details, count) => {
+      try {
+        desktopSettings.saveDesktopSettings({
+          disableHardwareAcceleration: true,
+        });
+        logToFile(
+          `[gpu] GPU process crashed ${count} times (last reason: ${details.reason}); disabling hardware acceleration on next launch.`,
+        );
+      } catch (error) {
+        logToFile(
+          "[gpu] Failed to persist hardware acceleration fallback:",
+          error.message,
+        );
+      }
+    },
+    log: logToFile,
+  });
+
+  app.on("child-process-gone", (_event, details) => {
+    gpuCrashTracker.handleChildProcessGone(details);
+  });
 }
 
 if (isInsecureModeEnabled()) {
