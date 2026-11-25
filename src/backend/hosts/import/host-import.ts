@@ -399,6 +399,22 @@ export async function runBulkImport(
     );
   }
 
+  // Two hosts can share ip, port and username and still be different hosts when
+  // the jump host in front of them differs, so the chain is part of the match.
+  const jumpChain = (jumps: unknown): string => {
+    try {
+      const list = typeof jumps === "string" ? JSON.parse(jumps) : jumps;
+      if (!Array.isArray(list)) return "";
+      return list.map((j: { hostId?: number }) => j?.hostId ?? "").join(">");
+    } catch {
+      return "";
+    }
+  };
+  const hostKey = (
+    h: { ip?: string; port?: number; username?: string },
+    jumps: unknown,
+  ): string => `${h.ip}:${h.port}:${h.username}:${jumpChain(jumps)}`;
+
   // Loaded for both modes: overwrite updates a match, skip leaves it alone.
   let existingHostMap: Map<string, { id: number }> | undefined;
   const hostRepository = createCurrentHostRepository();
@@ -407,8 +423,7 @@ export async function runBulkImport(
       await createCurrentHostResolutionRepository().findHostsByUserId(userId);
     existingHostMap = new Map();
     for (const h of allHosts) {
-      const key = `${h.ip}:${h.port}:${h.username}`;
-      existingHostMap.set(key, { id: h.id as number });
+      existingHostMap.set(hostKey(h, h.jumpHosts), { id: h.id as number });
     }
   } catch {
     existingHostMap = undefined;
@@ -453,8 +468,9 @@ export async function runBulkImport(
         continue;
       }
 
-      const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
-      const existing = existingHostMap?.get(lookupKey);
+      // Remap first: the key compares database ids.
+      const jumpHosts = remapImportedJumpHosts(hostData.jumpHosts, importedIds);
+      const existing = existingHostMap?.get(hostKey(hostData, jumpHosts));
       if (existing && !overwrite) {
         // Hosts that jump through this one still resolve to the kept host.
         if (exportId !== undefined) importedIds.set(exportId, existing.id);
@@ -548,7 +564,6 @@ export async function runBulkImport(
         }
       }
 
-      const jumpHosts = remapImportedJumpHosts(hostData.jumpHosts, importedIds);
       const sshDataObj: Record<string, unknown> = {
         userId: userId,
         connectionType: effectiveConnectionType,

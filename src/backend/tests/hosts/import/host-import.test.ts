@@ -110,6 +110,64 @@ describe("runBulkImport", () => {
     expect(events).toEqual([]);
   });
 
+  it("matches a host without jump hosts the same way as before", async () => {
+    mocks.list.mockResolvedValue([
+      { id: 12, ip: "192.0.2.1", port: 22, username: "alice", jumpHosts: null },
+    ]);
+    const result = await runBulkImport("u1", { hosts: [good] });
+    expect(result).toMatchObject({ success: 0, skipped: 1 });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps hosts that share ip, port and user but jump differently", async () => {
+    mocks.list.mockResolvedValue([
+      {
+        id: 12,
+        ip: "192.0.2.11",
+        port: 22,
+        username: "runner",
+        jumpHosts: JSON.stringify([{ hostId: 3 }]),
+      },
+    ]);
+    mocks.create.mockReset();
+    let nextId = 21;
+    mocks.create.mockImplementation(async () => ({ id: nextId++ }));
+    const bastion = (exportId: number, ip: string) => ({
+      exportId,
+      ip,
+      port: 22,
+      username: "ops",
+      authType: "none",
+    });
+    const behind = (exportId: number, jumpHostId: number) => ({
+      ...good,
+      exportId,
+      ip: "192.0.2.11",
+      username: "runner",
+      jumpHosts: [{ hostId: jumpHostId }],
+    });
+    try {
+      const result = await runBulkImport("u1", {
+        hosts: [
+          bastion(7, "203.0.113.7"),
+          bastion(8, "203.0.113.8"),
+          behind(11, 7),
+          behind(12, 8),
+        ],
+      });
+      expect(result).toMatchObject({ success: 4, skipped: 0, failed: 0 });
+      expect(result.createdHostIds).toEqual([21, 22, 23, 24]);
+      expect(mocks.create.mock.calls[2][1].jumpHosts).toBe(
+        JSON.stringify([{ hostId: 21 }]),
+      );
+      expect(mocks.create.mock.calls[3][1].jumpHosts).toBe(
+        JSON.stringify([{ hostId: 22 }]),
+      );
+    } finally {
+      mocks.create.mockReset();
+    }
+  });
+
   it("refuses overwrite together with atomic", async () => {
     await expect(
       runBulkImport("u1", { hosts: [good], overwrite: true, atomic: true }),
