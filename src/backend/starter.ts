@@ -22,18 +22,34 @@ const embedded = process.env.ELECTRON_EMBEDDED === "true";
 // The desktop app kills the backend after 5 s, Docker after 10 s.
 const SHUTDOWN_TOTAL_MS = embedded ? 4000 : 8500;
 // Kept back from plugins so the database still gets saved.
+const SHUTDOWN_HTTP_DRAIN_MS = embedded ? 750 : 1500;
 const SHUTDOWN_DATABASE_RESERVE_MS = 1500;
 
 let databaseOpen = false;
+let httpServerLoaded = false;
 let persistOnShutdown = false;
 
 const gracefulShutdown = createShutdown(
   () => [
     {
+      name: "http",
+      maxMs: SHUTDOWN_HTTP_DRAIN_MS,
+      run: async () => {
+        if (!httpServerLoaded) return;
+        const { drainHttpServer } = await import("./database/database.js");
+        await drainHttpServer(SHUTDOWN_HTTP_DRAIN_MS);
+      },
+    },
+    {
       // Plugin workers and processes stop before the database goes away, so
       // a plugin mid-write cannot outlive it.
       name: "plugins",
-      maxMs: SHUTDOWN_TOTAL_MS - SHUTDOWN_DATABASE_RESERVE_MS,
+      maxMs: Math.max(
+        500,
+        SHUTDOWN_TOTAL_MS -
+          SHUTDOWN_HTTP_DRAIN_MS -
+          SHUTDOWN_DATABASE_RESERVE_MS,
+      ),
       run: async () => {
         const { shutdownPlugins } = await import("./plugins/index.js");
         await shutdownPlugins();
@@ -301,6 +317,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     }
 
     const { serverReady } = await import("./database/database.js");
+    httpServerLoaded = true;
     await serverReady;
 
     // Before any role is edited: a role may hold a plugin permission whose

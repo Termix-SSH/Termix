@@ -27,5 +27,6 @@ exports.default = async function notarizing(context) {
     });
   } catch (error) {
     console.error('Notarization failed:', error);
+    throw error;
   }
 };

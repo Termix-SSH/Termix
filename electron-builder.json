@@ -32,7 +32,7 @@
     "!*.md",
     "!tsconfig*.json",
     "!vite.config.ts",
-    "!eslint.config.js",
+    "!eslint.config.mjs",
     "!node_modules/@napi-rs/canvas*/**/*",
     "!node_modules/@rollup/rollup-darwin-*/**/*",
     "!node_modules/@rollup/rollup-linux-*/**/*",

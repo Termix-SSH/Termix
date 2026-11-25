@@ -13,7 +13,6 @@ export async function getUiPreferences(): Promise<UiPreferences> {
     return sanitizeUiPreferences(response.data?.preferences);
   } catch (error) {
     handleApiError(error, "fetch UI preferences");
-    throw error;
   }
 }
 
@@ -29,6 +28,5 @@ export async function saveUiPreferences(
     await authApi.put("/ui-preferences", preferences);
   } catch (error) {
     handleApiError(error, "save UI preferences");
-    throw error;
   }
 }

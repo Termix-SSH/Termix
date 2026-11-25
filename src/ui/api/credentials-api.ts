@@ -153,7 +153,6 @@ export async function getSSHFolders(): Promise<SSHFolder[]> {
       operation: "fetch_ssh_folders",
     });
     handleApiError(error, "fetch SSH folders");
-    throw error;
   }
 }
 
@@ -193,7 +192,6 @@ export async function updateFolderMetadata(
       name,
     });
     handleApiError(error, "update folder metadata");
-    throw error;
   }
 }
 
@@ -208,7 +206,6 @@ export async function reorderFolders(
     return response.data;
   } catch (error) {
     handleApiError(error, "reorder folders");
-    throw error;
   }
 }
 
@@ -240,7 +237,6 @@ export async function deleteAllHostsInFolder(
       folderName,
     });
     handleApiError(error, "delete hosts in folder");
-    throw error;
   }
 }
 
@@ -270,6 +266,5 @@ export async function reorderCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "reorder credentials");
-    throw error;
   }
 }

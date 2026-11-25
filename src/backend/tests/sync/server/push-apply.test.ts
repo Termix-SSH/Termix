@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   missOnce: new Set<string>(),
   notified: 0,
   changed: 0,
+  reconcileCalls: 0,
 }));
 
 vi.mock("../../../utils/permission-manager.js", () => ({
@@ -74,7 +75,10 @@ vi.mock("../../../sync/records.js", () => ({
   allocateSeq: async () => 1,
 }));
 vi.mock("../../../sync/server/feed.js", () => ({
-  reconcileUser: async () => ({ changed: false, wire: state.wire }),
+  reconcileUser: async () => {
+    state.reconcileCalls++;
+    return { changed: false, wire: state.wire };
+  },
   notifyListeners: () => {
     state.notified++;
   },
@@ -111,6 +115,7 @@ beforeEach(() => {
   state.missOnce = new Set();
   state.notified = 0;
   state.changed = 0;
+  state.reconcileCalls = 0;
   resetSyncRegistry();
   registerEntity("core", {
     type: "hosts",
@@ -245,6 +250,19 @@ describe("applyPush", () => {
     expect(results[0]).toMatchObject({ status: "ok", revision: 1 });
     expect(state.records.get("snippets:child")).toMatchObject({
       hash: "h-child",
+    });
+    expect(state.wire.get("snippets:child")).toMatchObject({
+      syncId: "child",
+      v: 1,
+    });
+  });
+
+  it("only runs a single reconcile pass per push", async () => {
+    await applyPush("u1", [up("hosts", "a", 0, { name: "web" })]);
+    expect(state.reconcileCalls).toBe(1);
+    expect(state.wire.get("hosts:a")).toMatchObject({
+      syncId: "a",
+      name: "web",
     });
   });
 });

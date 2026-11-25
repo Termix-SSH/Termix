@@ -161,13 +161,9 @@ export function useTitleBarOverlayColors() {
 
 /** The sidebar color of the active theme, which the bar is drawn with. */
 function sidebarColor(): string {
-  const probe = document.createElement("div");
-  probe.style.cssText =
-    "position:fixed;visibility:hidden;background-color:var(--sidebar)";
-  document.body.appendChild(probe);
-  const color = getComputedStyle(probe).backgroundColor;
-  probe.remove();
-  return color;
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue("--sidebar")
+    .trim();
 }
 
 /** Browsers keep oklch() and similar as written, so let a canvas convert. */
@@ -181,10 +177,35 @@ function canvasRgb(color: string): string {
   return a === 0 ? "" : `rgb(${r}, ${g}, ${b})`;
 }
 
-/** Turns a computed color into a hex string. */
+/** Turns a CSS or computed color into a hex string. */
 function toHexColor(color: string): string {
-  if (/^(oklch|oklab|lab|lch|color)\(/.test(color)) color = canvasRgb(color);
-  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
+  const trimmed = color.trim();
+  if (!trimmed || trimmed === "transparent") return "";
+
+  const hex = trimmed.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hex) {
+    const digits = hex[1].toLowerCase();
+    if (digits.length === 3) {
+      return `#${digits[0]}${digits[0]}${digits[1]}${digits[1]}${digits[2]}${digits[2]}`;
+    }
+    if (digits.length === 4) {
+      if (digits[3] === "0") return "";
+      return `#${digits[0]}${digits[0]}${digits[1]}${digits[1]}${digits[2]}${digits[2]}`;
+    }
+    if (digits.length === 8) {
+      if (digits.slice(6) === "00") return "";
+      return `#${digits.slice(0, 6)}`;
+    }
+    return `#${digits}`;
+  }
+
+  let normalized = trimmed;
+  if (!/^rgba?\(/i.test(normalized)) {
+    normalized = canvasRgb(normalized);
+  }
+  const match = normalized.match(
+    /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/,
+  );
   // A fully transparent color has nothing to show; keep the last one.
   if (!match || match[4] === "0") return "";
   const [, r, g, b] = match;

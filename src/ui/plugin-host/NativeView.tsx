@@ -2,6 +2,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 import { usePluginScope } from "./scope";
 import { GrantedWebView } from "./frames/granted-web-view";
+import { embeddedViewCoordinator } from "./embedded-view-coordinator";
 
 interface Bounds {
   x: number;
@@ -121,10 +122,8 @@ function UrlView({
     let opened = false;
     let lastBounds = "";
     let lastVisible: boolean | null = null;
-    let frame = 0;
 
     const update = () => {
-      frame = 0;
       const rect = element.getBoundingClientRect();
       const bounds = {
         x: rect.left,
@@ -155,33 +154,16 @@ function UrlView({
         void view.setVisible(id, visible);
       }
     };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    sync.current = schedule;
 
-    const resize = new ResizeObserver(schedule);
-    resize.observe(element);
-    const mutations = new MutationObserver(schedule);
-    mutations.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "hidden", "data-state"],
+    const handle = embeddedViewCoordinator.register({
+      element,
+      update,
     });
-    window.addEventListener("resize", schedule);
-    window.addEventListener("scroll", schedule, true);
-    const timer = window.setInterval(schedule, 500);
-    schedule();
+    sync.current = handle.schedule;
 
     return () => {
       sync.current = () => {};
-      resize.disconnect();
-      mutations.disconnect();
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("scroll", schedule, true);
-      window.clearInterval(timer);
-      if (frame) cancelAnimationFrame(frame);
+      handle.dispose();
       void view.close(id);
     };
   }, [url]);

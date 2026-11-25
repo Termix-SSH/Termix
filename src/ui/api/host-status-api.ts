@@ -156,7 +156,6 @@ export async function getServerStatusById(id: number): Promise<ServerStatus> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch server status");
-    throw error;
   }
 }
 

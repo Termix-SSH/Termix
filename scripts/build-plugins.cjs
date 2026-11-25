@@ -15,6 +15,7 @@
  * dist/) is copied in place of its pin, or added when it has no pin.
  */
 
+const crypto = require("node:crypto");
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -33,6 +34,54 @@ const {
 
 const root = path.resolve(__dirname, "..");
 const destination = path.join(root, "dist", "plugins");
+const artifactCacheDir = path.join(
+  root,
+  "node_modules",
+  ".cache",
+  "termix-bundled-plugins",
+);
+const DOWNLOAD_CONCURRENCY = 4;
+
+async function fetchArtifactCached(plugin) {
+  const sha = typeof plugin.sha256 === "string" ? plugin.sha256.trim() : "";
+  const safeSha = /^[a-f0-9]{64}$/i.test(sha) ? sha.toLowerCase() : "";
+  const cachePath = safeSha
+    ? path.join(artifactCacheDir, `${safeSha}.tmxplug`)
+    : null;
+  if (cachePath && fs.existsSync(cachePath)) {
+    const cached = fs.readFileSync(cachePath);
+    const actual = crypto.createHash("sha256").update(cached).digest("hex");
+    if (actual === safeSha) {
+      return cached;
+    }
+  }
+  const buffer = await fetchArtifact(plugin, root);
+  if (cachePath) {
+    try {
+      fs.mkdirSync(artifactCacheDir, { recursive: true });
+      const tmp = `${cachePath}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, buffer);
+      fs.renameSync(tmp, cachePath);
+    } catch {
+      // Cache write failure is non-fatal.
+    }
+  }
+  return buffer;
+}
+
+async function runWithConcurrency(items, limit, worker) {
+  let nextIndex = 0;
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const current = items[nextIndex++];
+        await worker(current);
+      }
+    },
+  );
+  await Promise.all(runners);
+}
 
 async function main() {
   const profile = resolveProfile();
@@ -51,17 +100,17 @@ async function main() {
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(destination, { recursive: true });
 
-  for (const plugin of plugins) {
+  await runWithConcurrency(plugins, DOWNLOAD_CONCURRENCY, async (plugin) => {
     const repo = local.get(plugin.id);
     if (repo) {
       copyLocalBuild(repo, path.join(destination, plugin.id));
       console.log(`copied local build of ${plugin.id}`);
-      continue;
+      return;
     }
-    const buffer = await fetchArtifact(plugin, root);
+    const buffer = await fetchArtifactCached(plugin);
     await extractArtifact(buffer, path.join(destination, plugin.id), plugin.id);
     console.log(`unpacked ${plugin.id}`);
-  }
+  });
 
   // A local plugin with no pin yet still gets staged, so new plugins work too.
   const pinned = new Set(plugins.map((p) => p.id));

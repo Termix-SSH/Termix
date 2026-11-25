@@ -59,6 +59,7 @@ const { windowsLinuxMenuTemplate } = require("./keyboard-shortcuts.cjs");
 const { quitApp, closeAction, showTrayNotice } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { forcedScaleFactor } = require("./linux-scale.cjs");
+const { createTempFileManager } = require("./temp-files.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
 
@@ -704,7 +705,10 @@ const BACKEND_STDERR_TAIL_LIMIT = 8192;
 let backendStderrTail = "";
 let tray = null;
 let isQuitting = false;
-const tempFiles = new Map();
+const tempFileManager = createTempFileManager({
+  getTempRoot: () => path.join(app.getPath("temp"), "termix"),
+  log: logToFile,
+});
 // Paths the user picked in an open dialog this session. Only these may be
 // saved as the external editor, so the renderer cannot name an executable.
 const dialogChosenPaths = new Set();
@@ -718,48 +722,10 @@ const electronCacheBuildPath = path.join(
 );
 const termixSessionPartition = "persist:termix";
 
-function getTempRoot() {
-  const tempRoot = path.join(app.getPath("temp"), "termix");
-  fs.mkdirSync(tempRoot, { recursive: true });
-  return tempRoot;
-}
-
-function sanitizeFileName(fileName) {
-  const baseName = path.basename(String(fileName || "file"));
-  return baseName.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_") || "file";
-}
-
-function decodeFileContent(content, encoding) {
-  if (encoding === "base64") {
-    return Buffer.from(String(content || ""), "base64");
-  }
-  return Buffer.from(String(content || ""), "utf8");
-}
-
-function createManagedTempFile(fileName, content, encoding = "utf8") {
-  const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
-  const filePath = path.join(tempDir, sanitizeFileName(fileName));
-  fs.writeFileSync(filePath, decodeFileContent(content, encoding));
-  tempFiles.set(tempId, { path: filePath, dir: tempDir });
-  return { tempId, path: filePath };
-}
-
 function dragIcon() {
   // Windows cancels a drag with an empty icon
   const buf = Buffer.alloc(16 * 16 * 4, 0x99);
   return nativeImage.createFromBitmap(buf, { width: 16, height: 16 });
-}
-
-function cleanupManagedTempFile(tempId) {
-  const temp = tempFiles.get(tempId);
-  if (!temp) return;
-  try {
-    fs.rmSync(temp.dir, { recursive: true, force: true });
-  } catch (error) {
-    logToFile("Failed to clean up temporary file:", error.message);
-  }
-  tempFiles.delete(tempId);
 }
 
 // Mutual TLS for the linked server: Chromium asks which certificate from the
@@ -2082,7 +2048,7 @@ ipc.handle("show-open-dialog", async (_event, options) => {
 
 ipc.handle("create-temp-file", async (_event, fileData) => {
   try {
-    const result = createManagedTempFile(
+    const result = tempFileManager.createTempFile(
       fileData?.fileName,
       fileData?.content,
       fileData?.encoding,
@@ -2095,31 +2061,11 @@ ipc.handle("create-temp-file", async (_event, fileData) => {
 
 ipc.handle("create-temp-folder", async (_event, folderData) => {
   try {
-    const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
-    const folderPath = path.join(
-      tempDir,
-      sanitizeFileName(folderData?.folderName || "files"),
+    const result = tempFileManager.createTempFolder(
+      folderData?.folderName || "files",
+      folderData?.files || [],
     );
-    fs.mkdirSync(folderPath, { recursive: true });
-
-    for (const file of folderData?.files || []) {
-      const relativePath = String(file.relativePath || "")
-        .split(/[\\/]+/)
-        .map(sanitizeFileName)
-        .filter(Boolean)
-        .join(path.sep);
-      if (!relativePath) continue;
-      const targetPath = path.join(folderPath, relativePath);
-      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-      fs.writeFileSync(
-        targetPath,
-        decodeFileContent(file.content, file.encoding),
-      );
-    }
-
-    tempFiles.set(tempId, { path: folderPath, dir: tempDir });
-    return { success: true, tempId, path: folderPath };
+    return { success: true, ...result };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -2127,11 +2073,11 @@ ipc.handle("create-temp-folder", async (_event, folderData) => {
 
 ipc.handle("start-drag-to-desktop", (event, dragData) => {
   try {
-    const temp = tempFiles.get(dragData?.tempId);
-    if (!temp) return { success: false, error: "Temporary file not found" };
+    const tempPath = tempFileManager.getTempPath(dragData?.tempId);
+    if (!tempPath) return { success: false, error: "Temporary file not found" };
 
     event.sender.startDrag({
-      file: temp.path,
+      file: tempPath,
       icon: nativeImage.createEmpty(),
     });
     return { success: true };
@@ -2144,7 +2090,7 @@ ipc.handle("start-drag-to-desktop", (event, dragData) => {
 ipc.on("start-drag-files", (event, tempIds) => {
   try {
     const files = (Array.isArray(tempIds) ? tempIds : [])
-      .map((id) => tempFiles.get(id)?.path)
+      .map((id) => tempFileManager.getTempPath(id))
       .filter((p) => p && fs.existsSync(p));
     if (files.length === 0) return;
     event.sender.startDrag({
@@ -2159,7 +2105,7 @@ ipc.on("start-drag-files", (event, tempIds) => {
 
 ipc.handle("cleanup-temp-file", (_event, tempId) => {
   try {
-    cleanupManagedTempFile(tempId);
+    tempFileManager.cleanupTempFile(tempId);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -2321,6 +2267,8 @@ app.whenReady().then(async () => {
   createWindow();
   startAppUpdater();
   desktopSettings.removeOldSyncFiles();
+  tempFileManager.cleanupExpired();
+  tempFileManager.startCleanupTimer();
   logToFile("=== Startup complete ===");
 });
 
@@ -2353,9 +2301,7 @@ let backendStoppedForQuit = false;
 // The app waits for the backend to exit before it goes, or the backend and
 // its plugins keep their ports after the window is gone.
 app.on("will-quit", (event) => {
-  for (const tempId of tempFiles.keys()) {
-    cleanupManagedTempFile(tempId);
-  }
+  tempFileManager.cleanupAll();
   if (backendStoppedForQuit || !backendProcess) return;
   event.preventDefault();
   if (backendStopping) return;
