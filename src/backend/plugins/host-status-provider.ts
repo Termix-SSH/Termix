@@ -109,6 +109,10 @@ export const hostStatus = {
     running = false;
     active()?.stop();
   },
+  /** Whether anything checks hosts at all. */
+  available(): boolean {
+    return active() !== null;
+  },
   get(hostId: number): HostStatusEntry | null {
     return active()?.get(hostId) ?? null;
   },

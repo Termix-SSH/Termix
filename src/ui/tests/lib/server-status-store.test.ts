@@ -83,4 +83,24 @@ describe("ServerStatusStore", () => {
     store.setInitialLoadComplete(true);
     expect(onMeta).toHaveBeenCalledTimes(1);
   });
+
+  it("tells every watched host and the meta listeners when checks go off", () => {
+    const store = new ServerStatusStore();
+    const onHost = vi.fn();
+    const onMeta = vi.fn();
+    store.subscribeHost(1, onHost);
+    store.subscribeMeta(onMeta);
+    const before = store.getMetaSnapshot();
+
+    store.setChecksOff(true);
+    expect(store.getChecksOff()).toBe(true);
+    expect(onHost).toHaveBeenCalledTimes(1);
+    expect(onMeta).toHaveBeenCalledTimes(1);
+    expect(store.getMetaSnapshot()).not.toBe(before);
+
+    store.setChecksOff(true);
+    expect(onHost).toHaveBeenCalledTimes(1);
+    store.clear();
+    expect(store.getChecksOff()).toBe(false);
+  });
 });

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 const api = vi.hoisted(() => ({
   getAllServerStatuses: vi.fn(),
+  hostStatusChecksOff: vi.fn(() => false),
 }));
 vi.mock("@/main-axios", () => api);
 
@@ -26,6 +27,7 @@ const wrap =
 
 beforeEach(() => {
   api.getAllServerStatuses.mockReset();
+  api.hostStatusChecksOff.mockReturnValue(false);
   api.getAllServerStatuses.mockResolvedValue({
     "1": { status: "online", lastChecked: "t" },
     "2": { status: "down" },
@@ -57,6 +59,33 @@ describe("ServerStatusProvider", () => {
     expect(result.current.all.getStatus(3)).toBe("unknown");
     expect(result.current.all.statuses.size).toBe(2);
     expect(getLiveHostStatus(1)).toBe("online");
+  });
+
+  it("reports no host as checking while nothing checks hosts", async () => {
+    api.getAllServerStatuses.mockResolvedValue({});
+    api.hostStatusChecksOff.mockReturnValue(true);
+    const { result } = renderHook(
+      () => ({
+        all: useServerStatus(),
+        one: useHostStatus(1),
+        meta: useServerStatusMeta(),
+      }),
+      { wrapper: wrap(true) },
+    );
+    await waitFor(() => expect(result.current.meta.statusChecksOff).toBe(true));
+    expect(result.current.one).toBeNull();
+    expect(result.current.all.statusChecksOff).toBe(true);
+
+    // A host status plugin turned on again brings the statuses back.
+    api.hostStatusChecksOff.mockReturnValue(false);
+    api.getAllServerStatuses.mockResolvedValue({
+      "1": { status: "online", lastChecked: "t" },
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event("hosts:refresh"));
+    });
+    await waitFor(() => expect(result.current.one).toBe("online"));
+    expect(result.current.meta.statusChecksOff).toBe(false);
   });
 
   it("refreshes on focus and when hosts change, and keeps old statuses on errors", async () => {
