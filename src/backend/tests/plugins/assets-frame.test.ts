@@ -232,7 +232,7 @@ describe("pluginFrameCsp", () => {
 
   it("talks only to the plugin's own routes and sockets", () => {
     expect(csp).toContain(
-      "connect-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-api/docker/ wss://termix.example/base/plugin-ws/docker/",
+      "connect-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-api/docker/ wss://termix.example/base/plugin-ws/docker/ blob: data:",
     );
   });
 

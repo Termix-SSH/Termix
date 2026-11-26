@@ -113,7 +113,10 @@ export function pluginFrameCsp(input: PluginFrameCspInput): string {
     // its own routes serve.
     ["img-src", [assets, runtime, "data:", "blob:"]],
     ["media-src", [assets, "data:", "blob:"]],
-    ["connect-src", [assets, api, ws]],
+    // A blob: or data: URL a frame makes itself reads back from that opaque
+    // origin, which no listed origin covers: downloads hand their bytes over
+    // this way, and small exports are built inline.
+    ["connect-src", [assets, api, ws, "blob:", "data:"]],
     ["worker-src", ["blob:"]],
     ["frame-src", [assets, api]],
     ["object-src", ["'none'"]],
