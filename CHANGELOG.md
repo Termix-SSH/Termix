@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Plugins were restarted after the server was busy for half a minute, and turned off after this happened a few times, even though they were working
 
 ## 26.11.3
 

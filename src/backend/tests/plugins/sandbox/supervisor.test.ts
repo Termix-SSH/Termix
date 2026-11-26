@@ -685,6 +685,37 @@ export async function deactivate() {
     await supervisor.shutdown();
   }, 30_000);
 
+  it("keeps plugins that went quiet only because core was busy", async () => {
+    let starts = 0;
+    const supervisor = new SandboxSupervisor(config({ healthTimeoutMs: 400 }));
+    for (const id of ["calm-a", "calm-b", "calm-c"]) {
+      await supervisor.register(
+        spec(
+          id,
+          plugin(
+            id,
+            `export async function activate(ctx) { await ctx.report(1); }`,
+          ),
+          { sandbox: { alwaysOn: true }, report: () => starts++ },
+        ),
+      );
+    }
+    await until(() => starts === 3);
+    // Core busy past the health timeout, so every plugin looks quiet at once.
+    const end = Date.now() + 600;
+    while (Date.now() < end) {
+      // busy
+    }
+    // Past the longest the fleet waits (three timeouts).
+    await new Promise((r) => setTimeout(r, 2000));
+    expect(logged.some((l) => /stopped answering at once/.test(l.text))).toBe(
+      true,
+    );
+    expect(logged.some((l) => /restarting it/.test(l.text))).toBe(false);
+    expect(starts).toBe(3);
+    await supervisor.shutdown();
+  }, 30_000);
+
   it("restarts a plugin that keeps burning CPU past its cap", async () => {
     let starts = 0;
     // Low cap: under a busy full test run the spinner gets far less than a
