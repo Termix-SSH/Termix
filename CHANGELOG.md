@@ -15,6 +15,7 @@
 ### Fixed
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
+- Downloading a file from a plugin's page, like the file manager, opens the save dialog again instead of doing nothing
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
 
 ## 26.11.3
