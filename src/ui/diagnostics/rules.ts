@@ -17,6 +17,34 @@ export interface RuleInput {
   probes?: ProbeResult[];
   capture?: CaptureSnapshot;
   frontends?: Array<Record<string, unknown>>;
+  /** Where this page is, like https://termix.example:8443. */
+  pageOrigin?: string;
+}
+
+/** Which part of the address a frame's policy got wrong, without the address. */
+function originMismatch(page: string, sources: string[]): string | null {
+  let here: URL;
+  try {
+    here = new URL(page);
+  } catch {
+    return null;
+  }
+  // The desktop app's page (app://termix) is checked against its local
+  // backend, a different origin on purpose.
+  if (!/^https?:$/.test(here.protocol)) return null;
+  const origins = sources.flatMap((source) => {
+    try {
+      return [new URL(source)];
+    } catch {
+      return [];
+    }
+  });
+  if (origins.some((url) => url.origin === here.origin)) return null;
+  const site = origins.find((url) => /^https?:$/.test(url.protocol));
+  if (!site) return null;
+  if (site.hostname !== here.hostname) return "host";
+  if (site.protocol !== here.protocol) return "protocol (http or https)";
+  return "port";
 }
 
 export function findProblems(input: RuleInput): Finding[] {
@@ -40,6 +68,23 @@ export function findProblems(input: RuleInput): Finding[] {
           ? "Only requests without cookies failed, which is what a login proxy in front of Termix does to plugin frames. See https://docs.termix.site/configure/reverse-proxy#login-proxies"
           : "Something between the browser and Termix answers instead of Termix."
       }`,
+    );
+  }
+  const pageOrigin = input.pageOrigin;
+  const misplaced = pageOrigin
+    ? probes.find(
+        (p) =>
+          p.frameAncestors &&
+          originMismatch(pageOrigin, p.frameAncestors) !== null,
+      )
+    : undefined;
+  if (pageOrigin && misplaced?.frameAncestors) {
+    add(
+      "problem",
+      `Plugin frames are blocked: Termix wrote their security policy for a different ${originMismatch(
+        pageOrigin,
+        misplaced.frameAncestors,
+      )} than this page has, so the browser won't show them and every plugin times out. A reverse proxy in front of Termix is changing the Host header. Forward the original Host with its port (in nginx: proxy_set_header Host $http_host), or send X-Forwarded-Host, X-Forwarded-Port and X-Forwarded-Proto. See https://docs.termix.site/configure/reverse-proxy`,
     );
   }
   const unreachable = probes.filter((p) => p.status === null && !p.redirected);

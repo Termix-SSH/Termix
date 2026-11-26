@@ -6,6 +6,7 @@
 
 - Diagnostics report in the desktop app includes the update status and the app's own log
 - Plugins tab: plugins made for an older Termix can be updated right from the notice that lists them
+- Diagnostics report: when a reverse proxy changes the Host header so plugin frames are blocked, it says so and how to fix the proxy, instead of only listing plugins that timed out
 
 ### Changed
 
