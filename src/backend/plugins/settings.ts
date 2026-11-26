@@ -356,6 +356,8 @@ export async function listHostValues(
 export interface GetAllOptions {
   /** Replaces every secret with { set } so the value never leaves the server. */
   redactSecrets?: boolean;
+  /** Leaves out the fields nothing was stored for, instead of their defaults. */
+  storedOnly?: boolean;
 }
 
 /**
@@ -383,6 +385,7 @@ export async function getAllSettings(
 
   const values: Record<string, unknown> = {};
   for (const field of fields) {
+    if (options.storedOnly && !byKey.has(field.key)) continue;
     values[field.key] = await resolveFieldValue(
       field,
       byKey.get(field.key),

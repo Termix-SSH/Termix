@@ -19,6 +19,12 @@ import {
   withHostPluginSettings,
   type HostPluginSettings,
 } from "../database/routes/host-plugin-settings.js";
+import {
+  deletePendingHostSettings,
+  getPendingHostSettings,
+  listPendingHostSettings,
+  setPendingHostSettings,
+} from "./pending-host-settings.js";
 
 export interface PluginHostSettingsSync {
   exportValue?: (key: string, value: unknown) => unknown | Promise<unknown>;
@@ -51,9 +57,32 @@ export async function exportHostPluginSettings(
         )
       ).pluginSettings as HostPluginSettings | undefined) ?? {})
     : null;
+  return exportRunningPlugins(hostId, visible, false);
+}
+
+/**
+ * What a host carries from a linked desktop back to its server: the values
+ * the desktop holds, from the server or set here, never a plugin's built-in
+ * default, and what it keeps for plugins not running here. The host then
+ * reads the same whichever plugins run here, so one starting is not an edit.
+ */
+export async function exportLinkedHostPluginSettings(
+  hostId: number,
+): Promise<HostPluginSettings> {
+  return {
+    ...(await exportRunningPlugins(hostId, null, true)),
+    ...(await getPendingHostSettings(hostId)),
+  };
+}
+
+async function exportRunningPlugins(
+  hostId: number,
+  visible: HostPluginSettings | null,
+  storedOnly: boolean,
+): Promise<HostPluginSettings> {
   const result: HostPluginSettings = {};
   for (const manifest of hostSettingsPlugins()) {
-    const fields = declaredFields(manifest, "host").filter(
+    let fields = declaredFields(manifest, "host").filter(
       (field) =>
         field.type !== "secret" &&
         (!visible || field.key in (visible[manifest.id] ?? {})),
@@ -63,7 +92,16 @@ export async function exportHostPluginSettings(
       ? visible[manifest.id]
       : await getAllSettings(manifest, "host", hostId, {
           redactSecrets: true,
+          storedOnly,
         });
+    if (storedOnly) {
+      // A field with nothing stored would go out as the plugin's built-in
+      // default. One without a default has no value to send either way.
+      fields = fields.filter(
+        (field) => field.key in values || field.default === undefined,
+      );
+      if (fields.length === 0) continue;
+    }
     const hook = consume<PluginHostSettingsSync>(
       `${manifest.id}.hostSettingsSync`,
     );
@@ -124,5 +162,38 @@ export async function importHostPluginSettings(
         });
       }
     }
+  }
+}
+
+/**
+ * A linked desktop takes its server's values as sent. Those of a plugin not
+ * running here are kept as they came, until the server sends the host again
+ * or the plugin starts.
+ */
+export async function importLinkedHostPluginSettings(
+  hostId: number,
+  carried: unknown,
+): Promise<void> {
+  if (!carried || typeof carried !== "object") return;
+  const running = new Set(hostSettingsPlugins().map((manifest) => manifest.id));
+  await importHostPluginSettings(hostId, carried);
+  const kept: HostPluginSettings = {};
+  for (const [pluginId, values] of Object.entries(carried)) {
+    if (running.has(pluginId) || !values || typeof values !== "object") {
+      continue;
+    }
+    kept[pluginId] = values as Record<string, unknown>;
+  }
+  await setPendingHostSettings(hostId, kept);
+}
+
+/** Writes what a linked desktop kept for the plugins that have started since. */
+export async function applyPendingHostPluginSettings(): Promise<void> {
+  const running = hostSettingsPlugins().map((manifest) => manifest.id);
+  for (const { hostId, pluginId, settings } of await listPendingHostSettings(
+    running,
+  )) {
+    await importHostPluginSettings(hostId, { [pluginId]: settings });
+    await deletePendingHostSettings(hostId, pluginId);
   }
 }

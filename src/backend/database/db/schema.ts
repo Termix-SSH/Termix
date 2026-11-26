@@ -1014,6 +1014,33 @@ export const syncConflicts = sqliteTable(
 );
 
 /**
+ * Desktop only: a host's plugin settings as the server sent them, for a
+ * plugin not running on this desktop. The host sends them back unchanged,
+ * and they are written to the plugin's settings once it starts. `settings`
+ * holds the plugin's values as JSON.
+ */
+export const syncPendingHostSettings = sqliteTable(
+  "sync_pending_host_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    pluginId: text("plugin_id").notNull(),
+    settings: text("settings").notNull(),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_sync_pending_host_settings_host_plugin").on(
+      table.hostId,
+      table.pluginId,
+    ),
+  ],
+);
+
+/**
  * Desktop only: the server this install is linked to. One row at most.
  * Secrets (session token, proxy headers, basic auth) are encrypted with the
  * system key.

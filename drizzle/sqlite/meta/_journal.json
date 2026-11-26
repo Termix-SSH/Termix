@@ -561,6 +561,13 @@
       "when": 1794963336490,
       "tag": "0079_complex_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "6",
+      "when": 1795139248422,
+      "tag": "0080_happy_firestar",
+      "breakpoints": true
     }
   ]
 }
