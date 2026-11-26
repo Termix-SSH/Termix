@@ -29,6 +29,22 @@ describe("extraCaCertificates", () => {
       }),
     ).toEqual([]);
   });
+
+  it("adds the system store in the desktop app, whose fuses drop the variable (#1987)", () => {
+    const system = () => ["system-root"];
+
+    expect(
+      extraCaCertificates({ ELECTRON_EMBEDDED: "true" }, () => ROOT, system),
+    ).toEqual(["system-root"]);
+    expect(
+      extraCaCertificates(
+        { ELECTRON_EMBEDDED: "true", NODE_EXTRA_CA_CERTS: "/certs/root.crt" },
+        () => ROOT,
+        system,
+      ),
+    ).toEqual([ROOT, "system-root"]);
+    expect(extraCaCertificates({}, () => ROOT, system)).toEqual([]);
+  });
 });
 
 describe("trustExtraCertificates", () => {

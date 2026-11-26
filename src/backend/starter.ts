@@ -174,11 +174,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     }
 
     // The desktop app's fuses stop Node reading NODE_EXTRA_CA_CERTS itself.
-    if (process.env.NODE_EXTRA_CA_CERTS) {
-      const { cachedExtraCaCertificates, trustExtraCertificates } =
-        await import("./utils/extra-ca.js");
-      const certs = cachedExtraCaCertificates();
-      if (certs.length === 0 || !trustExtraCertificates(certs)) {
+    const { cachedExtraCaCertificates, trustExtraCertificates } =
+      await import("./utils/extra-ca.js");
+    if (!trustExtraCertificates(cachedExtraCaCertificates())) {
+      if (process.env.NODE_EXTRA_CA_CERTS) {
         systemLogger.warn(
           "NODE_EXTRA_CA_CERTS is set but no certificates could be added from it",
           { operation: "extra_ca_certs" },

@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Desktop app: Sync and plugins failed against a server whose certificate comes from a private CA, since the app drops NODE_EXTRA_CA_CERTS. The backend and plugins now trust the system certificate store like the app window does, so add the CA there
 
 ## 26.11.3
 
