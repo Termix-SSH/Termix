@@ -29,6 +29,7 @@ import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { pluginLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { runAsActor } from "./actor.js";
+import type { ApiKeyGrant } from "../operations/key-scopes.js";
 import { hasCapability } from "./permissions.js";
 import { declaredPermissions, resolvePermission } from "./rbac.js";
 
@@ -393,12 +394,14 @@ export function createPluginRouter({
   // After auth, so the actor is the user core authenticated rather than
   // whatever the request claimed.
   outer.use((req: Request, _res: Response, next: NextFunction) => {
-    const { userId, sessionId, apiKeyId, apiKeyScopes } = req as Request & {
-      userId?: string;
-      sessionId?: string;
-      apiKeyId?: string;
-      apiKeyScopes?: string[] | null;
-    };
+    const { userId, sessionId, apiKeyId, apiKeyScopes, apiKeyGrant } =
+      req as Request & {
+        userId?: string;
+        sessionId?: string;
+        apiKeyId?: string;
+        apiKeyScopes?: string[] | null;
+        apiKeyGrant?: ApiKeyGrant;
+      };
     if (!userId) {
       next();
       return;
@@ -407,6 +410,7 @@ export function createPluginRouter({
       origin: { kind: apiKeyId ? "api" : "ui" },
       apiKeyId,
       apiKeyScopes,
+      apiKeyGrant,
     });
   });
 

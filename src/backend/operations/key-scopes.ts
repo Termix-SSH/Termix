@@ -35,6 +35,39 @@ export function parseKeyScopes(
   }
 }
 
+/** What a key is held to beyond its scopes. */
+export interface ApiKeyGrant {
+  /** Null means every host the user can reach. */
+  hostIds: number[] | null;
+  /** Runs what rules would send for approval. Never what they refuse. */
+  autoApprove: boolean;
+}
+
+export function parseKeyGrant(key: {
+  hostIds: string | null;
+  autoApprove: boolean;
+}): ApiKeyGrant {
+  return { hostIds: parseKeyHosts(key.hostIds), autoApprove: key.autoApprove };
+}
+
+function parseKeyHosts(raw: string | null): number[] | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw);
+    return Array.isArray(value) ? value.filter(Number.isInteger) : [];
+  } catch {
+    // Unreadable means no host, not every host.
+    return [];
+  }
+}
+
+export function keyGrantAllowsHost(
+  grant: ApiKeyGrant | undefined,
+  hostId: number,
+): boolean {
+  return !grant?.hostIds || grant.hostIds.includes(hostId);
+}
+
 export function keyScopeAllows(
   scopes: string[] | null,
   method: string,

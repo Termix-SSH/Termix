@@ -26,7 +26,8 @@ import { PLUGIN_HOST_INPUT_KEYS } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
-import { getActor } from "./actor.js";
+import { getActor, getActorTrail } from "./actor.js";
+import { keyGrantAllowsHost } from "../operations/key-scopes.js";
 import { hostStatus, provideHostStatus } from "./host-status-provider.js";
 import { provideActivity, recentActivity } from "./activity-provider.js";
 import { loadProbeTargets } from "./ctx-probe.js";
@@ -591,7 +592,11 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       for (const host of sharedRows) {
         if (!byId.has(host.id)) byId.set(host.id, toSummary(host));
       }
-      return [...byId.values()];
+      // A key held to some hosts sees only those.
+      const grant = getActorTrail().apiKeyGrant;
+      return [...byId.values()].filter((host) =>
+        keyGrantAllowsHost(grant, host.id),
+      );
     },
 
     get: async (hostId) => {

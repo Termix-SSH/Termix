@@ -177,6 +177,14 @@ export function registerUserApiKeyRoutes(
    *                   type: string
    *                   enum: [read, operations:read, operations:run, full]
    *                 description: What the key may do. read only allows GET and HEAD requests, the operations scopes allow actions, full has no limits. Left out or null means read.
+   *               hostIds:
+   *                 type: array
+   *                 items:
+   *                   type: integer
+   *                 description: Hosts the key may act on. Left out means every host its user can reach. Only for keys limited to actions.
+   *               autoApprove:
+   *                 type: boolean
+   *                 description: Run what approval rules would hold for a person. Refusals still apply. Only for keys limited to actions.
    *     responses:
    *       201:
    *         description: API key created. Contains the full token (shown only once).
@@ -192,6 +200,7 @@ export function registerUserApiKeyRoutes(
   router.post("/api-keys", requireAdmin, async (req, res) => {
     try {
       const { name, userId: targetUserId, expiresAt, scopes } = req.body;
+      const { hostIds, autoApprove } = req.body;
       const apiKeyRepository = createCurrentApiKeyRepository();
       const userRepository = createCurrentUserRepository();
 
@@ -247,6 +256,24 @@ export function registerUserApiKeyRoutes(
         }
       }
 
+      // Only the gate checks these, so they go on keys that reach nothing else.
+      const limited = hostIds != null || autoApprove === true;
+      const actionsOnly =
+        scopesValue !== null &&
+        scopesValue.every((scope) => scope.startsWith("operations:"));
+      if (limited && !actionsOnly) {
+        return res.status(400).json({
+          error: "hostIds and autoApprove need a key limited to actions",
+        });
+      }
+      if (
+        hostIds != null &&
+        !(Array.isArray(hostIds) && hostIds.every(Number.isInteger))
+      ) {
+        return res.status(400).json({ error: "hostIds must be host ids" });
+      }
+      const hostIdsValue: number[] | null = hostIds ?? null;
+
       const rawToken = "tmx_" + crypto.randomBytes(32).toString("hex");
       const tokenPrefix = rawToken.substring(0, 12);
       const tokenHash = await bcrypt.hash(rawToken, 10);
@@ -264,6 +291,8 @@ export function registerUserApiKeyRoutes(
         lastUsedAt: null,
         isActive: true,
         scopes: scopesValue ? JSON.stringify(scopesValue) : null,
+        hostIds: hostIdsValue ? JSON.stringify(hostIdsValue) : null,
+        autoApprove: autoApprove === true,
       });
 
       const actorId = (req as AuthenticatedRequest).userId;
@@ -282,6 +311,8 @@ export function registerUserApiKeyRoutes(
           targetUserId,
           targetUsername: targetUser.username,
           scopes: scopesValue,
+          hostIds: hostIdsValue,
+          autoApprove: autoApprove === true,
         }),
         ipAddress,
         userAgent,
@@ -297,6 +328,8 @@ export function registerUserApiKeyRoutes(
         createdAt: now,
         expiresAt: expiresAtValue,
         scopes: scopesValue,
+        hostIds: hostIdsValue,
+        autoApprove: autoApprove === true,
         token: rawToken,
       });
     } catch (err) {

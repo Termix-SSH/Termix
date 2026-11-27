@@ -92,6 +92,16 @@ export interface ApiKey {
   isActive: boolean;
   /** Null for full access. */
   scopes?: string[] | null;
+  /** Hosts the key is held to. Null for every host its user can reach. */
+  hostIds?: number[] | string | null;
+  /** Runs what approval rules would hold for a person. */
+  autoApprove?: boolean;
+}
+
+/** Only for keys limited to actions. */
+export interface ApiKeyGrant {
+  hostIds?: number[];
+  autoApprove?: boolean;
 }
 
 export interface CreatedApiKey extends ApiKey {
@@ -107,6 +117,7 @@ export async function createApiKey(
   userId: string,
   expiresAt?: string | null,
   scopes?: string[] | null,
+  grant?: ApiKeyGrant,
 ): Promise<CreatedApiKey> {
   try {
     const response = await authApi.post("/users/api-keys", {
@@ -114,6 +125,7 @@ export async function createApiKey(
       userId,
       ...(expiresAt !== undefined ? { expiresAt } : {}),
       ...(scopes?.length ? { scopes } : {}),
+      ...grant,
     });
     return response.data;
   } catch (error) {

@@ -1099,6 +1099,8 @@ const migrateSchema = () => {
   repairSessionRecordingColumns(sqlite);
   repairSyncIdColumns(sqlite);
   addColumnIfNotExists("api_keys", "scopes", "TEXT");
+  addColumnIfNotExists("api_keys", "host_ids", "TEXT");
+  addColumnIfNotExists("api_keys", "auto_approve", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");

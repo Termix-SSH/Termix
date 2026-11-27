@@ -139,6 +139,7 @@ export function createPluginOperations({
         userId: actingUser(),
         origin: trail.origin ?? { kind: "plugin", pluginId },
         apiKeyScopes: trail.apiKeyScopes,
+        apiKeyGrant: trail.apiKeyGrant,
         depth: trail.depth,
       });
     },
@@ -169,6 +170,7 @@ export function createPluginOperations({
         userId: actingUser(),
         origin,
         apiKeyScopes: trail.apiKeyScopes,
+        apiKeyGrant: trail.apiKeyGrant,
         depth: trail.depth,
       });
     },

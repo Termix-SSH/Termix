@@ -20,6 +20,9 @@ export interface ApiKeyListRecord {
   isActive: boolean;
   /** JSON list, or null for full access. */
   scopes: string | null;
+  /** JSON list of host ids, or null for every host. */
+  hostIds: string | null;
+  autoApprove: boolean;
 }
 
 export class ApiKeyRepository {
@@ -48,6 +51,8 @@ export class ApiKeyRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         isActive: apiKeys.isActive,
         scopes: apiKeys.scopes,
+        hostIds: apiKeys.hostIds,
+        autoApprove: apiKeys.autoApprove,
       })
       .from(apiKeys)
       .leftJoin(users, eq(apiKeys.userId, users.id))
@@ -82,6 +87,8 @@ export class ApiKeyRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         isActive: apiKeys.isActive,
         scopes: apiKeys.scopes,
+        hostIds: apiKeys.hostIds,
+        autoApprove: apiKeys.autoApprove,
       })
       .from(apiKeys)
       .leftJoin(users, eq(apiKeys.userId, users.id))

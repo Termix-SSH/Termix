@@ -19,7 +19,12 @@ import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
 import { sessionAccessRefusal } from "../auth/session-access.js";
 import { endSocketSession, idleExpired } from "../auth/socket-sessions.js";
-import { keyScopeAllows, parseKeyScopes } from "../operations/key-scopes.js";
+import {
+  keyScopeAllows,
+  parseKeyGrant,
+  parseKeyScopes,
+  type ApiKeyGrant,
+} from "../operations/key-scopes.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -81,6 +86,7 @@ interface AuthenticatedRequest extends Request {
   sessionId?: string;
   apiKeyId?: string;
   apiKeyScopes?: string[] | null;
+  apiKeyGrant?: ApiKeyGrant;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
   actingAdminUserId?: string;
@@ -992,6 +998,7 @@ class AuthManager {
       req.userId = matchedKey.userId;
       req.apiKeyId = matchedKey.id;
       req.apiKeyScopes = scopes;
+      req.apiKeyGrant = parseKeyGrant(matchedKey);
       next();
     } catch (error) {
       databaseLogger.error("API key authentication failed", error, {

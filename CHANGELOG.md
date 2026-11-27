@@ -6,6 +6,7 @@
 
 - Diagnostics report in the desktop app includes the update status and the app's own log
 - Plugins tab: plugins made for an older Termix can be updated right from the notice that lists them
+- API keys limited to actions can be held to the hosts you pick, and can run what approval rules would hold for a person. A rule that refuses an action still refuses it
 
 ### Changed
 

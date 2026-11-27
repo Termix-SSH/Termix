@@ -296,6 +296,17 @@ describe("api key scopes", () => {
     const outcome = await runOperation({ ...base, apiKeyScopes: null });
     expect(outcome.status).toBe("success");
   });
+
+  it("holds a key to its hosts", async () => {
+    register();
+    const grant = { hostIds: [base.hostId + 1], autoApprove: false };
+    expect(await refused({ ...base, apiKeyGrant: grant })).toBe("SCOPE");
+    const outcome = await runOperation({
+      ...base,
+      apiKeyGrant: { hostIds: [base.hostId], autoApprove: false },
+    });
+    expect(outcome.status).toBe("success");
+  });
 });
 
 describe("runs", () => {
@@ -491,6 +502,24 @@ describe("policy", () => {
       reason: "No",
     }));
     expect(await refused(base)).toBe("DENIED");
+  });
+
+  it("lets an auto approve key skip the wait, never a refusal", async () => {
+    const run = register();
+    const grant = { hostIds: null, autoApprove: true };
+    const stop = provideApprovalPolicy("rules", manifestForPolicy, () => ({
+      decision: "approve",
+    }));
+    expect((await runOperation(base)).status).toBe("pending_approval");
+    const outcome = await runOperation({ ...base, apiKeyGrant: grant });
+    expect(outcome.status).toBe("success");
+    expect(run).toHaveBeenCalledTimes(1);
+
+    stop();
+    provideApprovalPolicy("rules", manifestForPolicy, () => ({
+      decision: "deny",
+    }));
+    expect(await refused({ ...base, apiKeyGrant: grant })).toBe("DENIED");
   });
 
   it("audits a denial", async () => {

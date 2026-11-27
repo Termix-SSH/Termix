@@ -8,6 +8,7 @@ import type { OperationRunRecord } from "../database/repositories/operation-repo
 import { PermissionManager } from "../utils/permission-manager.js";
 import type { ActorOrigin } from "../plugins/actor.js";
 import { getAction } from "./registry.js";
+import type { ApiKeyGrant } from "./key-scopes.js";
 import {
   cancelOperationRun,
   runOperation,
@@ -46,6 +47,7 @@ export async function undoRunAs(options: {
   origin: ActorOrigin;
   confirmed?: boolean;
   apiKeyScopes?: string[] | null;
+  apiKeyGrant?: ApiKeyGrant;
 }): Promise<OperationOutcome | null> {
   const run = await createCurrentOperationRepository().findRun(options.runId);
   const undo = run ? getAction(run.actionId)?.action.undo : undefined;
@@ -66,6 +68,7 @@ export async function undoRunAs(options: {
     userId: options.userId,
     origin: options.origin,
     apiKeyScopes: options.apiKeyScopes,
+    apiKeyGrant: options.apiKeyGrant,
   });
 }
 
