@@ -162,10 +162,14 @@ function ownsTabType(pluginId: string, type: unknown): boolean {
 
 /** The server root as a frame reaches it, like https://host/base. */
 export function frameBaseUrl(): string {
-  return new URL(getBackendUrl(""), window.location.href).href.replace(
-    /\/+$/,
-    "",
-  );
+  // Resolve against the origin, never the page URL. A page can carry a route, a
+  // query like ?success=true after a login redirect, or a hash, and none of
+  // those belong in a frame URL: the frame would request the app shell instead
+  // of /plugin-assets/... and never start.
+  const url = new URL(getBackendUrl("") || "/", window.location.origin);
+  url.search = "";
+  url.hash = "";
+  return url.href.replace(/\/+$/, "");
 }
 
 /** Where a frame page loads from. */
