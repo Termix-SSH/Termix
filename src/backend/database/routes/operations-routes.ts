@@ -28,6 +28,7 @@ import {
   readServerSignal,
 } from "../../operations/resources.js";
 import type { ActorOrigin } from "../../plugins/actor.js";
+import type { ApiKeyGrant } from "../../operations/key-scopes.js";
 
 const router = express.Router();
 const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
@@ -39,6 +40,7 @@ type OperationsRequest = Request & {
   userId: string;
   apiKeyId?: string;
   apiKeyScopes?: string[] | null;
+  apiKeyGrant?: ApiKeyGrant;
   actingAdminUserId?: string;
 };
 
@@ -357,6 +359,7 @@ router.post("/runs/:id/undo", authenticateJWT, async (req, res) => {
       origin: originOf(authReq),
       confirmed: req.body?.confirmed === true,
       apiKeyScopes: authReq.apiKeyScopes,
+      apiKeyGrant: authReq.apiKeyGrant,
     });
     if (!outcome) {
       res.status(404).json({ error: "Nothing to undo" });
@@ -734,6 +737,7 @@ router.post("/:id/run", authenticateJWT, async (req, res) => {
         userId: authReq.userId,
         origin: originOf(authReq),
         apiKeyScopes: authReq.apiKeyScopes,
+        apiKeyGrant: authReq.apiKeyGrant,
       }),
     );
   } catch (error) {

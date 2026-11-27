@@ -715,6 +715,10 @@ export const apiKeys = mysqlTable(
     isActive: boolean("is_active").notNull().default(true),
     // JSON list. Null means full access, which every older key has.
     scopes: text("scopes"),
+    // JSON list of host ids. Null means every host the user can reach.
+    hostIds: text("host_ids"),
+    // Runs what rules would send for approval. Never what they refuse.
+    autoApprove: boolean("auto_approve").notNull().default(false),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
 );

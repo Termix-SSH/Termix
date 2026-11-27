@@ -27,6 +27,7 @@ import {
   evaluateApproval,
   type ApprovalDecision,
 } from "./approvals.js";
+import { keyGrantAllowsHost, type ApiKeyGrant } from "./key-scopes.js";
 import { withLimits } from "./limits.js";
 import { emitOperationEvent } from "./events.js";
 import { dropResourceCache, dropServerSignals } from "./resources.js";
@@ -121,6 +122,7 @@ export interface OperationRequest {
   userId: string;
   origin: ActorOrigin;
   apiKeyScopes?: string[] | null;
+  apiKeyGrant?: ApiKeyGrant;
   depth?: number;
 }
 
@@ -241,6 +243,9 @@ async function prepare(request: OperationRequest): Promise<Prepared> {
     }
     if (action.scope === "resource" && !request.resourceKey) {
       throw new OperationError("INVALID_INPUT", "This action needs a target");
+    }
+    if (!keyGrantAllowsHost(request.apiKeyGrant, request.hostId)) {
+      throw new OperationError("SCOPE", "This API key may not use this host");
     }
     const access = await permissions.canAccessHost(
       request.userId,
@@ -382,6 +387,7 @@ async function execute(
       runAsActor(request.userId, "service", startWork, undefined, {
         origin: request.origin,
         apiKeyScopes: request.apiKeyScopes,
+        apiKeyGrant: request.apiKeyGrant,
         runId: runId ?? undefined,
         depth: (request.depth ?? 0) + 1,
       }),
@@ -578,6 +584,11 @@ export async function runOperation(
       hostTags: prepared.host?.tags,
       batchId: request.batchId,
     });
+  }
+  // The key's owner already said yes for these hosts. A refusal still stands,
+  // and so does the confirm a destructive action needs.
+  if (decision.decision === "approve" && request.apiKeyGrant?.autoApprove) {
+    decision = { decision: "allow" };
   }
   const username = await usernameOf(request.userId);
   if (decision.decision === "deny") {

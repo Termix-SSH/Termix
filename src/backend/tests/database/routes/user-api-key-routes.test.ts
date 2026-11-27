@@ -213,6 +213,30 @@ describe("creating keys", () => {
     expect((await create({ scopes: ["admin"] })).status).toBe(400);
   });
 
+  it("holds an actions key to hosts and lets it skip approval", async () => {
+    const res = await create({
+      scopes: ["operations:run"],
+      hostIds: [3, 7],
+      autoApprove: true,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.hostIds).toEqual([3, 7]);
+    expect(body.autoApprove).toBe(true);
+    const stored = await new ApiKeyRepository(h.context!).findById(body.id);
+    expect(stored).toMatchObject({ hostIds: "[3,7]", autoApprove: true });
+  });
+
+  it("refuses host limits and auto approve on keys that reach more", async () => {
+    expect((await create({ hostIds: [3] })).status).toBe(400);
+    expect((await create({ scopes: ["full"], autoApprove: true })).status).toBe(
+      400,
+    );
+    expect(
+      (await create({ scopes: ["operations:run"], hostIds: ["3"] })).status,
+    ).toBe(400);
+  });
+
   it("is admin only", async () => {
     h.caller = "alice";
     expect((await create({})).status).toBe(403);

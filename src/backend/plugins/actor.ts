@@ -19,6 +19,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ApiKeyGrant } from "../operations/key-scopes.js";
 
 /** How a call reached core, for run history and approval rules. */
 export interface ActorOrigin {
@@ -35,6 +36,7 @@ export interface ActorTrail {
   apiKeyId?: string;
   /** Null means a key with full access. */
   apiKeyScopes?: string[] | null;
+  apiKeyGrant?: ApiKeyGrant;
   /** The operation run this work belongs to. */
   runId?: string;
   /** How many operations or events led here. */
@@ -64,6 +66,7 @@ export function runAsActor<T>(
       origin: parent?.origin,
       apiKeyId: parent?.apiKeyId,
       apiKeyScopes: parent?.apiKeyScopes,
+      apiKeyGrant: parent?.apiKeyGrant,
       runId: parent?.runId,
       depth: parent?.depth,
       ...trail,
@@ -81,6 +84,7 @@ export function getActorTrail(): ActorTrail {
     origin: store?.origin,
     apiKeyId: store?.apiKeyId,
     apiKeyScopes: store?.apiKeyScopes,
+    apiKeyGrant: store?.apiKeyGrant,
     runId: store?.runId,
     depth: store?.depth,
   };
